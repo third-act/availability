@@ -1,5 +1,5 @@
 use bitflags::bitflags;
-use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
+use chrono::{NaiveDate, NaiveTime};
 use serde::{Deserialize, Serialize};
 
 bitflags! {

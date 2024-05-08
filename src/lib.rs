@@ -11,7 +11,7 @@ mod tests;
 /// Rules priority is based on vector index, higher index means higher priority.
 /// One frame is a continuous time interval with a state.
 /// The state of a frame is determined by the highest priority rule that applies to it.
-pub fn get_frames(rules: Vec<Rule>, start: NaiveDateTime, end: NaiveDateTime) -> Vec<Frame> {
+pub fn get_frames(rules: &Vec<Rule>, start: NaiveDateTime, end: NaiveDateTime) -> Vec<Frame> {
     if rules.is_empty() {
         return vec![Frame {
             start,
@@ -19,6 +19,11 @@ pub fn get_frames(rules: Vec<Rule>, start: NaiveDateTime, end: NaiveDateTime) ->
             state: false,
         }];
     }
+
+    let zero_hour: NaiveTime = match NaiveTime::from_hms_opt(0, 0, 0) {
+        Some(time) => time,
+        None => NaiveTime::default(),
+    };
 
     let mut frames = Vec::new();
     let mut traverse = start;
@@ -28,7 +33,7 @@ pub fn get_frames(rules: Vec<Rule>, start: NaiveDateTime, end: NaiveDateTime) ->
         let traverse_time = traverse.time();
 
         for (index, rule) in rules.iter().rev().enumerate() {
-            // prio is the index of the rule in the rules vector
+            // prio is the index of the rule in the rules vector, since the for loop is reversed we need to reverse the index
             let prio = rules.len() - index - 1;
 
             // if the traverse date is within the rule's start and end date
@@ -38,10 +43,9 @@ pub fn get_frames(rules: Vec<Rule>, start: NaiveDateTime, end: NaiveDateTime) ->
                 continue;
             }
 
-            // if the traverse time is within the rules start and end time, if teh start and end time is 00:00 any value is valid
+            // if the traverse time is within the rules start and end time, if the start and end time is 00:00 any value is valid
             if !((traverse_time >= rule.start_time && traverse_time < rule.end_time)
-                || (rule.start_time == NaiveTime::from_hms(0, 0, 0)
-                    && rule.end_time == NaiveTime::from_hms(0, 0, 0)))
+                || (rule.start_time == zero_hour && rule.end_time == zero_hour))
             {
                 println!("SKIP TRAVERSE TIME: {}", traverse_time);
                 println!("SKIP: {} - {}", rule.start_time, rule.end_time);
@@ -107,6 +111,17 @@ fn get_frame_end(
     lowest_prio: usize,
 ) -> NaiveDateTime {
     println!("LOWEST PRIO: {}", lowest_prio);
+
+    let end_of_day_hour: NaiveTime = match NaiveTime::from_hms_opt(23, 59, 59) {
+        Some(time) => time,
+        None => NaiveTime::default(),
+    };
+
+    let zero_hour: NaiveTime = match NaiveTime::from_hms_opt(0, 0, 0) {
+        Some(time) => time,
+        None => NaiveTime::default(),
+    };
+
     for rule in rules.iter().skip(lowest_prio).rev() {
         if !(start_date >= rule.start_date && end_date < rule.end_date) {
             println!(
@@ -116,9 +131,8 @@ fn get_frame_end(
             continue;
         }
 
-        if !((rule.start_time >= start_time && rule.end_time < end_time)
-            || (rule.start_time == NaiveTime::from_hms(0, 0, 0)
-                && rule.end_time == NaiveTime::from_hms(0, 0, 0)))
+        if !((rule.start_time > start_time && rule.start_time < end_time)
+            || (rule.start_time == zero_hour && rule.end_time == zero_hour))
         {
             println!("START TIME: {}", start_time);
             println!("END TIME: {}", end_time);
@@ -147,21 +161,17 @@ fn get_frame_end(
         return rule_start;
     }
 
+    if end_time == end_of_day_hour {
+        let next_date = match end_date.succ_opt() {
+            Some(date) => date,
+            None => end_date,
+        };
+
+        return next_date.and_time(zero_hour);
+    }
+
     return end_date.and_time(end_time);
 }
-
-// pub fn is_within_rule_time(time: NaiveDateTime, rule: &Rule) -> bool {
-//     let time_of_day = time.time();
-//     let start_of_day = rule.start.time();
-//     let mut end_of_day = rule.end.time();
-
-//     if end_of_day == NaiveTime::from_hms_opt(0, 0, 0).unwrap_or_default() {
-//         end_of_day = NaiveTime::from_hms_opt(23, 59, 59).unwrap_or_default();
-//     }
-
-//     // Check if the time falls within the interval defined by start and end
-//     time_of_day >= start_of_day && time_of_day < end_of_day
-// }
 
 pub fn is_within_weekdays(time: NaiveDate, weekdays: Weekdays) -> bool {
     let weekday = time.weekday();
