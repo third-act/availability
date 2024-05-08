@@ -1,0 +1,15 @@
+[package]
+name = "availability"
+version = "0.1.0"
+edition = "2021"
+authors = ["philip.gyllhamn@thirdact.se", "yngling@thirdact.se"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_repr = "0.1"
+serde-xml-rs = "0.4.0"
+chrono = { version = "0.4.19", features = ["serde"] }
+bitflags = "1.2.1"
