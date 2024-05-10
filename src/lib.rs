@@ -54,6 +54,7 @@ pub fn get_frames(rules: &Vec<Rule>, start: NaiveDateTime, end: NaiveDateTime) -
                         continue;
                     }
 
+                    //if rule end time is zero_hour, that means that the rule is probably infinite / doesnt have an end time
                     if rule.end_time == zero_hour {
                         traverse_date.and_time(end.time())
                     } else {
