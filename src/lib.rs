@@ -1,4 +1,4 @@
-use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, Weekday};
+use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime};
 use frame::Frame;
 use rule::{Rule, Weekdays};
 
@@ -38,8 +38,6 @@ pub fn get_frames(rules: &Vec<Rule>, start: NaiveDateTime, end: NaiveDateTime) -
 
             // if the traverse date is within the rule's start and end date
             if !(traverse_date >= rule.start_date && traverse_date < rule.end_date) {
-                println!("SKIP TRAVERSE: {}", traverse_time);
-                println!("SKIP: {} - {}", rule.start_date, rule.end_date);
                 continue;
             }
 
@@ -47,8 +45,6 @@ pub fn get_frames(rules: &Vec<Rule>, start: NaiveDateTime, end: NaiveDateTime) -
             if !((traverse_time >= rule.start_time && traverse_time < rule.end_time)
                 || (rule.start_time == zero_hour && rule.end_time == zero_hour))
             {
-                println!("SKIP TRAVERSE TIME: {}", traverse_time);
-                println!("SKIP: {} - {}", rule.start_time, rule.end_time);
                 continue;
             }
 
@@ -58,20 +54,20 @@ pub fn get_frames(rules: &Vec<Rule>, start: NaiveDateTime, end: NaiveDateTime) -
                         continue;
                     }
 
-                    let rule_end_time = traverse_date.and_time(rule.end_time);
+                    if rule.end_time == zero_hour {
+                        traverse_date.and_time(end.time())
+                    } else {
+                        traverse_date.and_time(rule.end_time)
+                    }
 
-                    rule_end_time
+                    // traverse_date.and_time(rule.end_time)
                 }
                 None => end,
             };
 
-            println!("RULE: {} - {}", rule.start_date, rule.end_date);
-            println!(
-                "TRAVERSE & END: {} - {}",
-                traverse_date.and_time(traverse_time),
-                end_date_time
-            );
-
+            // check if there is a higher priority rule that applies to the frame and return
+            // if we should use that rule start as fram end or continue with the current frame end
+            // also always use the minimum of the end date and the frame end
             let frame_end = get_frame_end(
                 &rules,
                 traverse_date,
@@ -81,12 +77,6 @@ pub fn get_frames(rules: &Vec<Rule>, start: NaiveDateTime, end: NaiveDateTime) -
                 prio,
             )
             .min(end);
-
-            println!(
-                "FRAME: {} - {}",
-                traverse_date.and_time(traverse_time),
-                frame_end
-            );
 
             frames.push(Frame {
                 start: traverse_date.and_time(traverse_time),
@@ -110,8 +100,6 @@ fn get_frame_end(
     end_time: NaiveTime,
     lowest_prio: usize,
 ) -> NaiveDateTime {
-    println!("LOWEST PRIO: {}", lowest_prio);
-
     let end_of_day_hour: NaiveTime = match NaiveTime::from_hms_opt(23, 59, 59) {
         Some(time) => time,
         None => NaiveTime::default(),
@@ -124,36 +112,28 @@ fn get_frame_end(
 
     for rule in rules.iter().skip(lowest_prio).rev() {
         if !(start_date >= rule.start_date && end_date < rule.end_date) {
-            println!(
-                "SKIPPING RULE FRAME: {} - {}",
-                rule.start_date, rule.end_date
-            );
             continue;
         }
 
         if !((rule.start_time > start_time && rule.start_time < end_time)
             || (rule.start_time == zero_hour && rule.end_time == zero_hour))
         {
-            println!("START TIME: {}", start_time);
-            println!("END TIME: {}", end_time);
-            println!(
-                "SKIPPING RULE FRAME TIME: {} - {}",
-                rule.start_time, rule.end_time
-            );
-
             continue;
         }
 
         let rule_start = match rule.weekdays {
             Some(weekdays) => {
                 if !is_within_weekdays(start_date, weekdays) {
-                    println!("SKIPPING RULE FRAME WEEKDAYS: {:?}", weekdays);
                     continue;
                 }
 
-                let rule_start_time = start_date.and_time(rule.start_time);
+                if rule.start_time == zero_hour {
+                    start_date.and_time(end_time)
+                } else {
+                    start_date.and_time(rule.start_time)
+                }
 
-                rule_start_time
+                // start_date.and_time(rule.start_time)
             }
             None => continue,
         };
