@@ -37,7 +37,7 @@ pub fn get_frames(rules: &Vec<Rule>, start: NaiveDateTime, end: NaiveDateTime) -
             let prio = rules.len() - index - 1;
 
             // if the traverse date is within the rule's start and end date
-            if !(traverse_date >= rule.start_date && traverse_date < rule.end_date) {
+            if !(traverse_date >= rule.start_date && traverse_date <= rule.end_date) {
                 continue;
             }
 

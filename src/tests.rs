@@ -454,6 +454,98 @@ fn get_frames_multiple_rules_scenario_3() {
 }
 
 #[test]
+fn get_frames_multiple_rules_scenario_4() {
+    let weekdays_1 = Weekdays::MONDAY
+        | Weekdays::TUESDAY
+        | Weekdays::WEDNESDAY
+        | Weekdays::THURSDAY
+        | Weekdays::FRIDAY;
+
+    let rules = vec![
+        Rule {
+            start_date: NaiveDate::from_str("2000-01-01").unwrap(),
+            end_date: NaiveDate::from_str("3000-01-01").unwrap(),
+            start_time: NaiveTime::from_str("00:00:00").unwrap(),
+            end_time: NaiveTime::from_str("00:00:00").unwrap(),
+            weekdays: None,
+            state: false,
+        },
+        Rule {
+            start_date: NaiveDate::from_str("2024-01-01").unwrap(),
+            end_date: NaiveDate::from_str("2025-01-01").unwrap(),
+            start_time: NaiveTime::from_str("08:00:00").unwrap(),
+            end_time: NaiveTime::from_str("16:00:00").unwrap(),
+            weekdays: Some(weekdays_1),
+            state: true,
+        },
+        Rule {
+            start_date: NaiveDate::from_str("2024-12-24").unwrap(),
+            end_date: NaiveDate::from_str("2024-12-24").unwrap(),
+            start_time: NaiveTime::from_str("00:00:00").unwrap(),
+            end_time: NaiveTime::from_str("23:59:59").unwrap(),
+            weekdays: Some(weekdays_1),
+            state: false,
+        },
+    ];
+
+    let start = NaiveDateTime::from_str("2024-12-24T12:00:00").unwrap();
+    let end = NaiveDateTime::from_str("2024-12-24T16:00:00").unwrap();
+
+    let frames = get_frames(&rules, start, end);
+    assert_eq!(frames.len(), 1);
+    assert_eq!(
+        frames[0],
+        Frame {
+            start,
+            end,
+            state: false,
+        }
+    );
+}
+
+#[test]
+fn get_frames_exact_time_frame() {
+    let weekdays_1 = Weekdays::MONDAY
+        | Weekdays::TUESDAY
+        | Weekdays::WEDNESDAY
+        | Weekdays::THURSDAY
+        | Weekdays::FRIDAY;
+
+    let rules = vec![
+        Rule {
+            start_date: NaiveDate::from_str("2000-01-01").unwrap(),
+            end_date: NaiveDate::from_str("3000-01-01").unwrap(),
+            start_time: NaiveTime::from_str("00:00:00").unwrap(),
+            end_time: NaiveTime::from_str("00:00:00").unwrap(),
+            weekdays: None,
+            state: false,
+        },
+        Rule {
+            start_date: NaiveDate::from_str("2024-01-01").unwrap(),
+            end_date: NaiveDate::from_str("2025-01-01").unwrap(),
+            start_time: NaiveTime::from_str("08:00:00").unwrap(),
+            end_time: NaiveTime::from_str("16:00:00").unwrap(),
+            weekdays: Some(weekdays_1),
+            state: true,
+        },
+    ];
+
+    let start = NaiveDateTime::from_str("2024-12-24T08:00:00").unwrap();
+    let end = NaiveDateTime::from_str("2024-12-24T16:00:00").unwrap();
+
+    let frames = get_frames(&rules, start, end);
+    assert_eq!(frames.len(), 1);
+    assert_eq!(
+        frames[0],
+        Frame {
+            start,
+            end,
+            state: true,
+        }
+    );
+}
+
+#[test]
 fn test_is_within_weekday() {
     use chrono::NaiveDateTime;
 
