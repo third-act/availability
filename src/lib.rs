@@ -11,12 +11,17 @@ mod tests;
 /// Rules priority is based on vector index, higher index means higher priority.
 /// One frame is a continuous time interval with a state.
 /// The state of a frame is determined by the highest priority rule that applies to it.
-pub fn get_frames(rules: &Vec<Rule>, start: NaiveDateTime, end: NaiveDateTime) -> Vec<Frame> {
+/// Generic type T is the type of the state.
+pub fn get_frames<T: Clone + Default>(
+    rules: &Vec<Rule<T>>,
+    start: NaiveDateTime,
+    end: NaiveDateTime,
+) -> Vec<Frame<T>> {
     if rules.is_empty() {
         return vec![Frame {
             start,
             end,
-            state: false,
+            state: T::default(),
         }];
     }
 
@@ -79,10 +84,10 @@ pub fn get_frames(rules: &Vec<Rule>, start: NaiveDateTime, end: NaiveDateTime) -
             )
             .min(end);
 
-            frames.push(Frame {
+            frames.push(Frame::<T> {
                 start: traverse_date.and_time(traverse_time),
                 end: frame_end,
-                state: rule.state,
+                state: rule.state.clone(),
             });
 
             traverse = frame_end;
@@ -93,8 +98,8 @@ pub fn get_frames(rules: &Vec<Rule>, start: NaiveDateTime, end: NaiveDateTime) -
     frames
 }
 
-fn get_frame_end(
-    rules: &Vec<Rule>,
+fn get_frame_end<T: Clone>(
+    rules: &Vec<Rule<T>>,
     start_date: NaiveDate,
     end_date: NaiveDate,
     start_time: NaiveTime,

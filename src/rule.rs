@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+
 use bitflags::bitflags;
 use chrono::{NaiveDate, NaiveTime};
 use serde::{Deserialize, Serialize};
@@ -32,14 +34,14 @@ impl Weekdays {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct Rule {
+pub struct Rule<T: Clone> {
     pub start_date: NaiveDate,
     pub end_date: NaiveDate,
     pub start_time: NaiveTime,
     pub end_time: NaiveTime,
     #[serde(with = "integer_representation")]
     pub weekdays: Option<Weekdays>,
-    pub state: bool,
+    pub state: T,
 }
 
 mod integer_representation {
