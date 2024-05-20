@@ -32,14 +32,15 @@ impl Weekdays {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct Rule<T: Clone> {
+pub struct Rule<T: Serialize> {
     pub start_date: NaiveDate,
     pub end_date: NaiveDate,
     pub start_time: NaiveTime,
     pub end_time: NaiveTime,
     #[serde(with = "integer_representation")]
     pub weekdays: Option<Weekdays>,
-    pub state: T,
+    pub state: bool,
+    pub payload: Option<T>,
 }
 
 mod integer_representation {

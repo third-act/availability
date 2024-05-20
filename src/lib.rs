@@ -1,6 +1,7 @@
 use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime};
 use frame::Frame;
 use rule::{Rule, Weekdays};
+use serde::Serialize;
 
 mod frame;
 mod rule;
@@ -12,7 +13,7 @@ mod tests;
 /// One frame is a continuous time interval with a state.
 /// The state of a frame is determined by the highest priority rule that applies to it.
 /// Generic type T is the type of the state.
-pub fn get_frames<T: Clone + Default>(
+pub fn get_frames<T: Serialize + Clone>(
     rules: &Vec<Rule<T>>,
     start: NaiveDateTime,
     end: NaiveDateTime,
@@ -21,7 +22,8 @@ pub fn get_frames<T: Clone + Default>(
         return vec![Frame {
             start,
             end,
-            state: T::default(),
+            state: false,
+            payload: None,
         }];
     }
 
@@ -80,6 +82,7 @@ pub fn get_frames<T: Clone + Default>(
                 end_date_time.date(),
                 traverse_time,
                 end_date_time.time(),
+                rule.state,
                 prio,
             )
             .min(end);
@@ -88,6 +91,7 @@ pub fn get_frames<T: Clone + Default>(
                 start: traverse_date.and_time(traverse_time),
                 end: frame_end,
                 state: rule.state.clone(),
+                payload: rule.payload.clone(),
             });
 
             traverse = frame_end;
@@ -98,12 +102,13 @@ pub fn get_frames<T: Clone + Default>(
     frames
 }
 
-fn get_frame_end<T: Clone>(
+fn get_frame_end<T: Serialize>(
     rules: &Vec<Rule<T>>,
     start_date: NaiveDate,
     end_date: NaiveDate,
     start_time: NaiveTime,
     end_time: NaiveTime,
+    state: bool,
     lowest_prio: usize,
 ) -> NaiveDateTime {
     let end_of_day_hour: NaiveTime = match NaiveTime::from_hms_opt(23, 59, 59) {
@@ -117,10 +122,12 @@ fn get_frame_end<T: Clone>(
     };
 
     for rule in rules.iter().skip(lowest_prio).rev() {
-        if !(start_date >= rule.start_date && end_date < rule.end_date) {
+        // check if rule is within start and end and if the rule state is different from the current state
+        if !(start_date >= rule.start_date && end_date < rule.end_date && rule.state != state) {
             continue;
         }
 
+        //
         if !((rule.start_time > start_time && rule.start_time < end_time)
             || (rule.start_time == zero_hour && rule.end_time == zero_hour))
         {

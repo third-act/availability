@@ -24,29 +24,32 @@ fn get_frames_two_rules_regular_opening_times() {
         | Weekdays::FRIDAY;
 
     let rules = vec![
-        Rule {
+        Rule::<()> {
             start_date: NaiveDate::from_str("2000-01-01").unwrap(),
             end_date: NaiveDate::from_str("3000-01-01").unwrap(),
             start_time: NaiveTime::from_str("00:00:00").unwrap(),
             end_time: NaiveTime::from_str("00:00:00").unwrap(),
             weekdays: None,
             state: false,
+            payload: None,
         },
-        Rule {
+        Rule::<()> {
             start_date: NaiveDate::from_str("2024-01-01").unwrap(),
             end_date: NaiveDate::from_str("2025-01-01").unwrap(),
             start_time: NaiveTime::from_str("08:00:00").unwrap(),
             end_time: NaiveTime::from_str("16:00:00").unwrap(),
             weekdays: Some(weekdays),
             state: true,
+            payload: None,
         },
-        Rule {
+        Rule::<()> {
             start_date: NaiveDate::from_str("2024-06-03").unwrap(),
             end_date: NaiveDate::from_str("2024-06-06").unwrap(),
             start_time: NaiveTime::from_str("08:00:00").unwrap(),
             end_time: NaiveTime::from_str("16:00:00").unwrap(),
             weekdays: Some(weekdays),
             state: false,
+            payload: None,
         },
     ];
 
@@ -61,6 +64,7 @@ fn get_frames_two_rules_regular_opening_times() {
             start,
             end,
             state: true,
+            payload: None,
         }
     );
 }
@@ -83,10 +87,11 @@ fn get_frames_no_rule() {
     assert_eq!(frames.len(), 1);
     assert_eq!(
         frames[0],
-        Frame {
+        Frame::<()> {
             start,
             end,
             state: false,
+            payload: None,
         }
     );
 }
@@ -102,21 +107,23 @@ fn get_frames_one_rule_with_baseline() {
         | Weekdays::FRIDAY;
 
     let rules = vec![
-        Rule {
+        Rule::<()> {
             start_date: NaiveDate::from_str("2000-01-01").unwrap(),
             end_date: NaiveDate::from_str("3000-01-01").unwrap(),
             start_time: NaiveTime::from_str("00:00:00").unwrap(),
             end_time: NaiveTime::from_str("00:00:00").unwrap(),
             weekdays: None,
             state: false,
+            payload: None,
         },
-        Rule {
+        Rule::<()> {
             start_date: NaiveDate::from_str("2024-01-01").unwrap(),
             end_date: NaiveDate::from_str("2025-01-01").unwrap(),
             start_time: NaiveTime::from_str("08:00:00").unwrap(),
             end_time: NaiveTime::from_str("16:00:00").unwrap(),
             weekdays: Some(weekdays),
             state: true,
+            payload: None,
         },
     ];
 
@@ -131,6 +138,7 @@ fn get_frames_one_rule_with_baseline() {
             start,
             end,
             state: true,
+            payload: None,
         }
     );
 }
@@ -145,13 +153,14 @@ fn get_frames_always_open() {
         | Weekdays::SATURDAY
         | Weekdays::SUNDAY;
 
-    let rules = vec![Rule {
+    let rules = vec![Rule::<()> {
         start_date: NaiveDate::from_str("2000-01-01").unwrap(),
         end_date: NaiveDate::from_str("3000-01-01").unwrap(),
         start_time: NaiveTime::from_str("00:00:00").unwrap(),
         end_time: NaiveTime::from_str("00:00:00").unwrap(),
         weekdays: Some(all_weekdays),
         state: true,
+        payload: None,
     }];
 
     let start = NaiveDateTime::from_str("2024-04-29T08:00:00").unwrap();
@@ -165,6 +174,7 @@ fn get_frames_always_open() {
             start,
             end,
             state: true,
+            payload: None,
         }
     );
 }
@@ -191,6 +201,7 @@ fn get_frames_multiple_rules_scenario_1() {
             end_time: NaiveTime::from_str("00:00:00").unwrap(),
             weekdays: None,
             state: false,
+            payload: None,
         },
         Rule {
             start_date: NaiveDate::from_str("2024-01-01").unwrap(),
@@ -199,6 +210,7 @@ fn get_frames_multiple_rules_scenario_1() {
             end_time: NaiveTime::from_str("16:00:00").unwrap(),
             weekdays: Some(weekdays_1),
             state: true,
+            payload: None,
         },
         Rule {
             start_date: NaiveDate::from_str("2024-06-03").unwrap(),
@@ -207,14 +219,16 @@ fn get_frames_multiple_rules_scenario_1() {
             end_time: NaiveTime::from_str("16:00:00").unwrap(),
             weekdays: Some(weekdays_3),
             state: false,
+            payload: None,
         },
-        Rule {
+        Rule::<()> {
             start_date: NaiveDate::from_str("2024-05-11").unwrap(),
             end_date: NaiveDate::from_str("2025-05-11").unwrap(),
             start_time: NaiveTime::from_str("08:00:00").unwrap(),
             end_time: NaiveTime::from_str("23:59:59").unwrap(),
             weekdays: Some(weekdays_2),
             state: true,
+            payload: None,
         },
     ];
 
@@ -229,6 +243,7 @@ fn get_frames_multiple_rules_scenario_1() {
             start,
             end,
             state: true,
+            payload: None,
         }
     );
 
@@ -243,6 +258,7 @@ fn get_frames_multiple_rules_scenario_1() {
             start,
             end: NaiveDateTime::from_str("2024-04-29T16:00:00").unwrap(),
             state: true,
+            payload: None,
         }
     );
     assert_eq!(
@@ -251,6 +267,7 @@ fn get_frames_multiple_rules_scenario_1() {
             start: NaiveDateTime::from_str("2024-04-29T16:00:00").unwrap(),
             end,
             state: false,
+            payload: None,
         }
     );
 
@@ -265,6 +282,7 @@ fn get_frames_multiple_rules_scenario_1() {
             start,
             end,
             state: false,
+            payload: None,
         }
     );
 
@@ -279,6 +297,7 @@ fn get_frames_multiple_rules_scenario_1() {
             start,
             end: NaiveDateTime::from_str("2024-05-07T08:00:00").unwrap(),
             state: false,
+            payload: None,
         }
     );
     assert_eq!(
@@ -287,6 +306,7 @@ fn get_frames_multiple_rules_scenario_1() {
             start: NaiveDateTime::from_str("2024-05-07T08:00:00").unwrap(),
             end: NaiveDateTime::from_str("2024-05-07T16:00:00").unwrap(),
             state: true,
+            payload: None,
         }
     );
     assert_eq!(
@@ -295,6 +315,7 @@ fn get_frames_multiple_rules_scenario_1() {
             start: NaiveDateTime::from_str("2024-05-07T16:00:00").unwrap(),
             end,
             state: false,
+            payload: None,
         }
     );
 }
@@ -313,7 +334,7 @@ fn get_frames_multiple_rules_scenario_2() {
 
     let weekdays_3 = Weekdays::MONDAY | Weekdays::TUESDAY;
 
-    let rules = vec![
+    let rules: Vec<Rule<()>> = vec![
         Rule {
             start_date: NaiveDate::from_str("2000-01-01").unwrap(),
             end_date: NaiveDate::from_str("3000-01-01").unwrap(),
@@ -321,6 +342,7 @@ fn get_frames_multiple_rules_scenario_2() {
             end_time: NaiveTime::from_str("00:00:00").unwrap(),
             weekdays: None,
             state: false,
+            payload: None,
         },
         Rule {
             start_date: NaiveDate::from_str("2024-01-01").unwrap(),
@@ -329,6 +351,7 @@ fn get_frames_multiple_rules_scenario_2() {
             end_time: NaiveTime::from_str("16:00:00").unwrap(),
             weekdays: Some(weekdays_1),
             state: true,
+            payload: None,
         },
         Rule {
             start_date: NaiveDate::from_str("2024-06-03").unwrap(),
@@ -337,6 +360,7 @@ fn get_frames_multiple_rules_scenario_2() {
             end_time: NaiveTime::from_str("16:00:00").unwrap(),
             weekdays: Some(weekdays_3),
             state: false,
+            payload: None,
         },
         Rule {
             start_date: NaiveDate::from_str("2024-05-11").unwrap(),
@@ -345,6 +369,7 @@ fn get_frames_multiple_rules_scenario_2() {
             end_time: NaiveTime::from_str("23:59:59").unwrap(),
             weekdays: Some(weekdays_2),
             state: true,
+            payload: None,
         },
         Rule {
             start_date: NaiveDate::from_str("2024-05-12").unwrap(),
@@ -353,6 +378,7 @@ fn get_frames_multiple_rules_scenario_2() {
             end_time: NaiveTime::from_str("03:00:00").unwrap(),
             weekdays: Some(weekdays_2),
             state: true,
+            payload: None,
         },
     ];
 
@@ -367,6 +393,7 @@ fn get_frames_multiple_rules_scenario_2() {
             start,
             end: NaiveDateTime::from_str("2024-05-12T00:00:00").unwrap(),
             state: true,
+            payload: None,
         }
     );
     assert_eq!(
@@ -375,6 +402,7 @@ fn get_frames_multiple_rules_scenario_2() {
             start: NaiveDateTime::from_str("2024-05-12T00:00:00").unwrap(),
             end: NaiveDateTime::from_str("2024-05-12T03:00:00").unwrap(),
             state: true,
+            payload: None,
         }
     );
     assert_eq!(
@@ -383,6 +411,7 @@ fn get_frames_multiple_rules_scenario_2() {
             start: NaiveDateTime::from_str("2024-05-12T03:00:00").unwrap(),
             end,
             state: false,
+            payload: None,
         }
     );
 }
@@ -395,7 +424,7 @@ fn get_frames_multiple_rules_scenario_3() {
         | Weekdays::THURSDAY
         | Weekdays::FRIDAY;
 
-    let rules = vec![
+    let rules: Vec<Rule<()>> = vec![
         Rule {
             start_date: NaiveDate::from_str("2000-01-01").unwrap(),
             end_date: NaiveDate::from_str("3000-01-01").unwrap(),
@@ -403,6 +432,7 @@ fn get_frames_multiple_rules_scenario_3() {
             end_time: NaiveTime::from_str("00:00:00").unwrap(),
             weekdays: None,
             state: false,
+            payload: None,
         },
         Rule {
             start_date: NaiveDate::from_str("2024-01-01").unwrap(),
@@ -411,6 +441,7 @@ fn get_frames_multiple_rules_scenario_3() {
             end_time: NaiveTime::from_str("16:00:00").unwrap(),
             weekdays: Some(weekdays_1),
             state: true,
+            payload: None,
         },
         Rule {
             start_date: NaiveDate::from_str("2024-01-01").unwrap(),
@@ -419,6 +450,7 @@ fn get_frames_multiple_rules_scenario_3() {
             end_time: NaiveTime::from_str("23:59:59").unwrap(),
             weekdays: Some(weekdays_1),
             state: true,
+            payload: None,
         },
     ];
 
@@ -433,6 +465,7 @@ fn get_frames_multiple_rules_scenario_3() {
             start,
             end: NaiveDateTime::from_str("2024-05-07T16:00:00").unwrap(),
             state: true,
+            payload: None,
         }
     );
     assert_eq!(
@@ -441,6 +474,7 @@ fn get_frames_multiple_rules_scenario_3() {
             start: NaiveDateTime::from_str("2024-05-07T16:00:00").unwrap(),
             end: NaiveDateTime::from_str("2024-05-07T20:00:00").unwrap(),
             state: false,
+            payload: None,
         }
     );
     assert_eq!(
@@ -449,6 +483,7 @@ fn get_frames_multiple_rules_scenario_3() {
             start: NaiveDateTime::from_str("2024-05-07T20:00:00").unwrap(),
             end,
             state: true,
+            payload: None,
         }
     );
 }
@@ -461,7 +496,7 @@ fn get_frames_multiple_rules_scenario_4() {
         | Weekdays::THURSDAY
         | Weekdays::FRIDAY;
 
-    let rules = vec![
+    let rules: Vec<Rule<()>> = vec![
         Rule {
             start_date: NaiveDate::from_str("2000-01-01").unwrap(),
             end_date: NaiveDate::from_str("3000-01-01").unwrap(),
@@ -469,6 +504,7 @@ fn get_frames_multiple_rules_scenario_4() {
             end_time: NaiveTime::from_str("00:00:00").unwrap(),
             weekdays: None,
             state: false,
+            payload: None,
         },
         Rule {
             start_date: NaiveDate::from_str("2024-01-01").unwrap(),
@@ -477,6 +513,7 @@ fn get_frames_multiple_rules_scenario_4() {
             end_time: NaiveTime::from_str("16:00:00").unwrap(),
             weekdays: Some(weekdays_1),
             state: true,
+            payload: None,
         },
         Rule {
             start_date: NaiveDate::from_str("2024-12-24").unwrap(),
@@ -485,6 +522,7 @@ fn get_frames_multiple_rules_scenario_4() {
             end_time: NaiveTime::from_str("23:59:59").unwrap(),
             weekdays: Some(weekdays_1),
             state: false,
+            payload: None,
         },
     ];
 
@@ -499,6 +537,7 @@ fn get_frames_multiple_rules_scenario_4() {
             start,
             end,
             state: false,
+            payload: None,
         }
     );
 }
@@ -511,7 +550,7 @@ fn get_frames_exact_time_frame() {
         | Weekdays::THURSDAY
         | Weekdays::FRIDAY;
 
-    let rules = vec![
+    let rules: Vec<Rule<()>> = vec![
         Rule {
             start_date: NaiveDate::from_str("2000-01-01").unwrap(),
             end_date: NaiveDate::from_str("3000-01-01").unwrap(),
@@ -519,6 +558,7 @@ fn get_frames_exact_time_frame() {
             end_time: NaiveTime::from_str("00:00:00").unwrap(),
             weekdays: None,
             state: false,
+            payload: None,
         },
         Rule {
             start_date: NaiveDate::from_str("2024-01-01").unwrap(),
@@ -527,6 +567,7 @@ fn get_frames_exact_time_frame() {
             end_time: NaiveTime::from_str("16:00:00").unwrap(),
             weekdays: Some(weekdays_1),
             state: true,
+            payload: None,
         },
     ];
 
@@ -541,6 +582,7 @@ fn get_frames_exact_time_frame() {
             start,
             end,
             state: true,
+            payload: None,
         }
     );
 }
