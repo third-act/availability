@@ -3,8 +3,8 @@ use frame::Frame;
 use rule::{Rule, Weekdays};
 use serde::Serialize;
 
-mod frame;
-mod rule;
+pub mod frame;
+pub mod rule;
 
 #[cfg(test)]
 mod tests;
@@ -12,7 +12,7 @@ mod tests;
 /// Rules priority is based on vector index, higher index means higher priority.
 /// One frame is a continuous time interval with a state.
 /// The state of a frame is determined by the highest priority rule that applies to it.
-/// Generic type T is the type of the state.
+/// Generic type T is the type of the payload.
 pub fn get_frames<T: Serialize + Clone>(
     rules: &Vec<Rule<T>>,
     start: NaiveDateTime,
