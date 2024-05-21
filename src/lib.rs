@@ -3,8 +3,8 @@ use frame::Frame;
 use rule::{Rule, Weekdays};
 use serde::Serialize;
 
-pub mod frame;
-pub mod rule;
+mod frame;
+mod rule;
 
 #[cfg(test)]
 mod tests;
