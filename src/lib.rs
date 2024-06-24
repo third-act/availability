@@ -5,6 +5,7 @@ use serde::Serialize;
 
 pub mod frame;
 pub mod rule;
+pub mod util;
 
 #[cfg(test)]
 mod tests;

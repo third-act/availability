@@ -1,3 +1,4 @@
+use crate::util;
 use bitflags::bitflags;
 use chrono::{NaiveDate, NaiveTime};
 use serde::{Deserialize, Serialize};
@@ -40,6 +41,8 @@ pub struct Rule<T: Serialize> {
     #[serde(with = "integer_representation")]
     pub weekdays: Option<Weekdays>,
     pub state: bool,
+    #[serde(skip_serializing_if = "util::is_none")]
+    #[serde(default)]
     pub payload: Option<T>,
 }
 
