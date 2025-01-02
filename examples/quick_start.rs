@@ -55,10 +55,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     store_availability.add_rule(sale_rule, 2)?;
     store_availability.add_rule(inventory_rule, 3)?;
 
-    // 4) Convert the layered rules into "frames" (time slices).
-    store_availability.to_frames();
+    // 4) Convert the layered rules into "frames" that cover only the specified date range.
+    store_availability.to_frames_in_range_str("240101000000", "240124235959");
 
-    // 5) Print out the resulting frames:
+    // Optional) Print out the resulting frames:
     println!("Store Schedule Overview:");
     println!("=======================");
     for (index, frame) in store_availability.frames.iter().enumerate() {
@@ -75,6 +75,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("Manager on Duty: {}", hours.manager_on_duty);
             println!("---");
         }
+    }
+
+    // Optional) Get frame from datetime:
+    println!("=======================");
+    let frame = store_availability
+        .get_frame_from_str("240101090000")
+        .unwrap();
+    println!("Frame at 2024-01-01 09:00:00 is: {}", frame.off);
+    if let Some(payload) = &frame.payload {
+        println!("Staff Count: {}", payload.staff_count);
+        println!("Manager on Duty: {}", payload.manager_on_duty);
     }
 
     Ok(())

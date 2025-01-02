@@ -225,13 +225,10 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            rule.start.format("%Y-%m-%d %H:%M:%S").to_string(),
-            "2024-01-01 09:00:00"
+            rule.start.format("%y%m%d%H%M%S").to_string(),
+            "240101090000"
         );
-        assert_eq!(
-            rule.end.format("%Y-%m-%d %H:%M:%S").to_string(),
-            "2024-01-01 17:00:00"
-        );
+        assert_eq!(rule.end.format("%y%m%d%H%M%S").to_string(), "240101170000");
         assert!(rule.weekdays.is_none());
         assert!(!rule.off);
         assert!(rule.payload.is_none());
@@ -239,10 +236,8 @@ mod tests {
 
     #[test]
     fn test_builder_with_datetime() {
-        let start =
-            NaiveDateTime::parse_from_str("2024-01-01 09:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
-        let end =
-            NaiveDateTime::parse_from_str("2024-01-01 17:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let start = NaiveDateTime::parse_from_str("240101090000", "%y%m%d%H%M%S").unwrap();
+        let end = NaiveDateTime::parse_from_str("240101170000", "%y%m%d%H%M%S").unwrap();
 
         let rule = RuleBuilder::<String>::new()
             .start_datetime(start)
@@ -333,10 +328,7 @@ mod tests {
         let result = parse_datetime("240101090000");
         assert!(result.is_ok());
         let dt = result.unwrap();
-        assert_eq!(
-            dt.format("%Y-%m-%d %H:%M:%S").to_string(),
-            "2024-01-01 09:00:00"
-        );
+        assert_eq!(dt.format("%y%m%d%H%M%S").to_string(), "240101090000");
 
         // Test invalid cases
         assert!(parse_datetime("invalid").is_err()); // Too short

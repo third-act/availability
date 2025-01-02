@@ -59,8 +59,10 @@ fn main() {
     store_availability.add_rule(new_year_sale, 2).unwrap();
     store_availability.add_rule(inventory_day, 3).unwrap();
 
-    // Convert rules to frames
-    store_availability.to_frames();
+    // Convert rules to frames between 2024-01-01 and 2024-01-24
+    let start = create_datetime(2024, 1, 1, 0, 0, 0);
+    let end = create_datetime(2024, 1, 24, 0, 0, 0);
+    store_availability.to_frames_in_range(start, end);
 
     // Display the results
     println!("Store Schedule Overview:");
@@ -78,8 +80,20 @@ fn main() {
             println!("Staff Count: {}", hours.staff_count);
             println!("Manager: {}", hours.manager_on_duty);
             println!("---");
+        } else {
+            println!(
+                "Frame {}: {} to {} {}",
+                index + 1,
+                frame.start.format("%Y-%m-%d %H:%M"),
+                frame.end.format("%Y-%m-%d %H:%M"),
+                frame.start.weekday()
+            );
+            println!("Status: CLOSED (base rule)");
+            println!("---");
         }
     }
+    println!("=======================");
+    println!("End of Schedule\n");
 }
 
 fn create_datetime(

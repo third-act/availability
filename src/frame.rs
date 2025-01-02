@@ -49,22 +49,4 @@ where
     pub fn payload(&self) -> Option<T> {
         self.payload.clone()
     }
-
-    pub fn is_open(&self, datetime: NaiveDateTime) -> bool {
-        // Can return early if frame is off
-        if self.is_off() {
-            return false;
-        }
-        // Check if datetime is within
-        match self.start <= datetime && self.end > datetime {
-            true => {
-                // Check if time is within
-                match self.start.time() <= datetime.time() && self.end.time() > datetime.time() {
-                    true => true,
-                    false => false,
-                }
-            }
-            false => false,
-        }
-    }
 }

@@ -82,9 +82,6 @@ where
 
     /// Check if two rules overlap in NaiveDateTime.
     pub(crate) fn datetime_overlaps_with(&self, other: &Rule<T>) -> bool {
-        // Start is inclusive, end is exclusive
-        // Rules overlap if one's start is before other's end AND other's start is before one's end
-        // self.start <= other.end && other.start <= self.end
         self.start < other.end && other.start < self.end
     }
 
