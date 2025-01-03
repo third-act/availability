@@ -1,5 +1,4 @@
 use availability::{availability::Availability, rulebuilder::RuleBuilder};
-use chrono::Datelike;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -61,23 +60,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Optional) Print out the resulting frames:
     println!("Store Schedule Overview:");
     println!("=======================");
-    for (index, frame) in store_availability.frames.iter().enumerate() {
-        if let Some(hours) = &frame.payload {
-            println!(
-                "Frame {}: {} to {} ({:?})",
-                index + 1,
-                frame.start.format("%Y-%m-%d %H:%M"),
-                frame.end.format("%Y-%m-%d %H:%M"),
-                frame.start.weekday()
-            );
-            println!("Status: {}", if frame.off { "CLOSED" } else { "OPEN" });
-            println!("Staff Count: {}", hours.staff_count);
-            println!("Manager on Duty: {}", hours.manager_on_duty);
-            println!("---");
-        }
-    }
+    println!("{}", store_availability);
 
     // Optional) Get frame from datetime:
+    println!("Get frames from datetime:");
     println!("=======================");
     let frame = store_availability
         .get_frame_from_str("240101090000")

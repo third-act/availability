@@ -1,3 +1,5 @@
+use std::fmt;
+
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
@@ -10,6 +12,27 @@ where
     pub end: NaiveDateTime,
     pub off: bool,
     pub payload: Option<T>,
+}
+
+impl<T> fmt::Display for Frame<T>
+where
+    T: Serialize + for<'de> Deserialize<'de> + Clone,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let status = if self.off { "Off" } else { "On" };
+        let payload_str = match &self.payload {
+            Some(payload) => match serde_json::to_string(payload) {
+                Ok(s) => s,
+                Err(_) => "<invalid payload>".to_string(),
+            },
+            None => "None".to_string(),
+        };
+        write!(
+            f,
+            "Frame [Start: {}, End: {}, Status: {}, Payload: {}]",
+            self.start, self.end, status, payload_str
+        )
+    }
 }
 
 impl<T> Frame<T>

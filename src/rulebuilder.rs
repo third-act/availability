@@ -4,11 +4,11 @@ use serde::{Deserialize, Serialize};
 use crate::rule::Rule;
 use crate::weekdays::{FRIDAY, MONDAY, SATURDAY, SUNDAY, THURSDAY, TUESDAY, WEDNESDAY};
 
+#[derive(Default)]
 pub struct RuleBuilder<T>
 where
     T: Serialize + for<'de> Deserialize<'de> + Clone,
 {
-    // Store the raw strings instead of parsed times
     start_str: Option<String>,
     end_str: Option<String>,
     weekdays: Option<u8>,
@@ -20,7 +20,8 @@ impl<T> RuleBuilder<T>
 where
     T: Serialize + for<'de> Deserialize<'de> + Clone,
 {
-    /// Create a new builder with no data set yet.
+    /// Creates a new `RuleBuilder` instance with default values.
+    /// All fields are initially None, except for `off`, which defaults to `false`.
     pub fn new() -> Self {
         RuleBuilder {
             start_str: None,
@@ -31,21 +32,36 @@ where
         }
     }
 
-    /// Store the raw start time string; no validation is done yet.
-    /// Example: "231225093000" for 2023-12-25 09:30:00.
+    /// Sets the start time of the rule using a raw datetime string.
+    ///
+    /// The datetime string must be in the `"YYMMDDHHMMSS"` format, representing
+    /// year, month, day, hour, minute, and second. For example, `"231225093000"`
+    /// corresponds to December 25, 2023, at 09:30:00.
+    ///
+    /// **Note:** This method does not perform validation on the datetime string.
+    ///  Validation is done in the `build()` method which returns a `Result`.
     pub fn start_time_str(mut self, datetime_str: &str) -> Self {
         self.start_str = Some(datetime_str.to_string());
         self
     }
 
-    /// Store the raw end time string; no validation is done yet.
-    /// Example: "231225173000" for 2023-12-25 17:30:00.
+    /// Sets the end time of the rule using a raw datetime string.
+    ///
+    /// The datetime string must be in the `"YYMMDDHHMMSS"` format, representing
+    /// year, month, day, hour, minute, and second. For example, `"231225173000"`
+    /// corresponds to December 25, 2023, at 17:30:00.
+    ///
+    /// **Note:** This method does not perform validation on the datetime string.
+    ///  Validation is done in the `build()` method which returns a `Result`.
     pub fn end_time_str(mut self, datetime_str: &str) -> Self {
         self.end_str = Some(datetime_str.to_string());
         self
     }
 
-    /// Set the start time using a NaiveDateTime directly
+    /// Sets the start time of the rule using a `NaiveDateTime` instance.
+    ///
+    /// This method converts the provided `NaiveDateTime` into the expected
+    /// `"YYMMDDHHMMSS"` string format internally.
     pub fn start_datetime(mut self, datetime: NaiveDateTime) -> Self {
         // Convert the datetime to the expected string format
         let datetime_str = datetime.format("%y%m%d%H%M%S").to_string();
@@ -53,7 +69,10 @@ where
         self
     }
 
-    /// Set the end time using a NaiveDateTime directly
+    /// Sets the end time of the rule using a `NaiveDateTime` instance.
+    ///
+    /// This method converts the provided `NaiveDateTime` into the expected
+    /// `"YYMMDDHHMMSS"` string format internally.
     pub fn end_datetime(mut self, datetime: NaiveDateTime) -> Self {
         // Convert the datetime to the expected string format
         let datetime_str = datetime.format("%y%m%d%H%M%S").to_string();
@@ -61,11 +80,14 @@ where
         self
     }
 
-    /// Bulk-set weekdays from string slice array.
+    /// Sets the weekdays on which the rule is active using a slice of string slices.
     ///
-    /// If **any** string is invalid, we set a special sentinel bit pattern
-    /// (`0xFF`) to indicate an invalid weekday was encountered. Then in
-    /// `build()` we detect `Some(0xFF)` and return an error.
+    /// Each string should represent a day of the week, such as `"monday"`, `"tue"`, etc.
+    /// The method is case-insensitive and accepts both full names and common abbreviations.
+    ///
+    /// If **any** string in the slice is invalid (i.e., does not correspond to a valid weekday),
+    /// the builder sets a special sentinel bit pattern (`0xFF`) to indicate the presence of an
+    /// invalid weekday. The `build()` method will then detect this and return an error.
     pub fn weekdays(mut self, days: &[&str]) -> Self {
         let mut mask = self.weekdays.unwrap_or(0);
         for day in days {
@@ -80,8 +102,7 @@ where
                 _ => {
                     // Sentinel for "invalid weekday"
                     mask = 0xFF;
-                    // We can break now, because we only need to record
-                    // that at least one weekday was invalid.
+                    // Break early because at least one weekday was invalid.
                     break;
                 }
             };
@@ -90,62 +111,108 @@ where
         self
     }
 
+    /// Adds Monday to the set of active weekdays for the rule.
     pub fn monday(mut self) -> Self {
         let val = self.weekdays.unwrap_or(0) | MONDAY;
         self.weekdays = Some(val);
         self
     }
-
+    /// Adds Tuesday to the set of active weekdays for the rule.
     pub fn tuesday(mut self) -> Self {
         let val = self.weekdays.unwrap_or(0) | TUESDAY;
         self.weekdays = Some(val);
         self
     }
-
+    /// Adds Wednesday to the set of active weekdays for the rule.
     pub fn wednesday(mut self) -> Self {
         let val = self.weekdays.unwrap_or(0) | WEDNESDAY;
         self.weekdays = Some(val);
         self
     }
-
+    /// Adds Thursday to the set of active weekdays for the rule.
     pub fn thursday(mut self) -> Self {
         let val = self.weekdays.unwrap_or(0) | THURSDAY;
         self.weekdays = Some(val);
         self
     }
-
+    /// Adds Friday to the set of active weekdays for the rule.
     pub fn friday(mut self) -> Self {
         let val = self.weekdays.unwrap_or(0) | FRIDAY;
         self.weekdays = Some(val);
         self
     }
-
+    /// Adds Saturday to the set of active weekdays for the rule.
     pub fn saturday(mut self) -> Self {
         let val = self.weekdays.unwrap_or(0) | SATURDAY;
         self.weekdays = Some(val);
         self
     }
-
+    /// Adds Sunday to the set of active weekdays for the rule.
     pub fn sunday(mut self) -> Self {
         let val = self.weekdays.unwrap_or(0) | SUNDAY;
         self.weekdays = Some(val);
         self
     }
 
-    /// Store whether the rule is "off" (closed).
+    /// Sets whether the rule is "off" or "on".
+    ///
+    /// - `true`: The rule is "off" (closed).
+    /// - `false`: The rule is "on" (active).
+    ///
+    /// # Parameters
+    ///
+    /// - `off`: A boolean indicating the status of the rule
     pub fn off(mut self, off: bool) -> Self {
         self.off = off;
         self
     }
 
-    /// Store the payload directly.
+    /// Attaches a custom payload to the rule.
+    ///
+    /// The payload can be any type that implements `Serialize`, `Deserialize`, and `Clone`.
+    ///
+    /// # Parameters
+    ///
+    /// - `payload`: The payload to attach to the rule.
+    ///
+    /// # Returns
+    ///
+    /// Returns the updated `RuleBuilder` instance.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// let payload = json!({"description": "Maintenance Window"});
+    /// let builder = RuleBuilder::new()
+    ///     .payload(payload);
+    /// ```
     pub fn payload(mut self, payload: T) -> Self {
         self.payload = Some(payload);
         self
     }
 
-    /// Parse/validate everything and return `Rule<T>` or an error.
-    /// This is where all actual parsing logic and validations happen.
+    /// Builds the `Rule` instance by parsing and validating all set fields.
+    ///
+    /// This method performs the following steps:
+    /// 1. Ensures that both start and end times are set.
+    /// 2. Validates the format and correctness of the datetime strings.
+    /// 3. Checks that the start time precedes the end time.
+    /// 4. Validates the weekdays, ensuring no invalid weekdays were set.
+    ///
+    /// If all validations pass, it returns an `Ok(Rule<T>)`. Otherwise, it returns an `Err(String)`
+    /// containing an error message.
+    ///
+    /// # Errors
+    ///
+    /// - Returns an error if either the start or end time is not set.
+    /// - Returns an error if the datetime strings are improperly formatted or invalid.
+    /// - Returns an error if the start time is not before the end time.
+    /// - Returns an error if invalid weekdays were specified.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Rule<T>)` if the rule is successfully built.
+    /// - `Err(String)` containing an error message if validation fails.
     pub fn build(self) -> Result<Rule<T>, String> {
         // First, ensure we had a start/end string
         let start_str = self

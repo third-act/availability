@@ -1,4 +1,4 @@
-use std::result::Result;
+use std::{fmt, result::Result};
 
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
@@ -8,13 +8,46 @@ use crate::{
     rule::{relative_to_absolute_rules, Rule},
 };
 
+/// Represents the availability schedule with priority-based rules.
+///
+/// The `Availability` struct manages a collection of rules that define availability
+/// over time. Rules can overlap in dates if weekdays don't overlap.
+/// Rules are prioritized, where a higher priority values takes precedence over rules with
+/// lower priority values. A continuous vector of frames is generated from the rules.
+///
+/// Start and end for rules and frames are always inclusive and exclusive respectively.
+///
+/// Note that the base rule is always present at priority 0, and it is always "off" (closed).
+/// You cannot add, remove, or modify the base rule.
+///
+/// # Type Parameters
+///
+/// - `T`: The type of the payload attached to each frame. Must implement `Serialize`, `Deserialize`,
+///   and `Clone`.
+///
+#[derive(Default)]
 pub struct Availability<T>
 where
     T: Serialize + for<'de> Deserialize<'de> + Clone,
     Rule<T>: Clone,
 {
     pub rules: Vec<Vec<Rule<T>>>,
-    pub frames: Vec<Frame<T>>,
+    pub(crate) frames: Vec<Frame<T>>,
+}
+
+impl<T> fmt::Display for Availability<T>
+where
+    T: Serialize + for<'de> Deserialize<'de> + Clone,
+    Rule<T>: fmt::Display,
+    Frame<T>: fmt::Display,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Availability Frames:")?;
+        for frame in &self.frames {
+            writeln!(f, "  {}", frame)?;
+        }
+        Ok(())
+    }
 }
 
 impl<T> Availability<T>
@@ -22,6 +55,10 @@ where
     T: Serialize + for<'de> Deserialize<'de> + Clone,
     Rule<T>: Clone,
 {
+    /// Creates a new, empty `Availability` instance.
+    ///
+    /// Initializes an `Availability` with no rules. The base rule is automatically included
+    /// with the lowest priority to cover all possible date-times as "off" (closed).
     pub fn new() -> Self {
         Availability {
             rules: vec![vec![Rule::base_rule()]],
@@ -29,6 +66,7 @@ where
         }
     }
 
+    /// Adds a new rule with the specified priority.
     pub fn add_rule(&mut self, rule: Rule<T>, priority: usize) -> Result<(), String> {
         if priority == 0 {
             return Err("Priority 0 is reserved for base rule and cannot be modified".to_string());
@@ -55,8 +93,7 @@ where
                         "New rule overlaps with existing rule at priority {}. \
                     New rule: {:?} to {:?}, Existing rule: {:?} to {:?}",
                         priority, rule.start, rule.end, existing_rule.start, existing_rule.end
-                    )
-                    .into())
+                    ))
                 }
                 // Overlaps + Relative
                 (true, false) => {
@@ -66,8 +103,7 @@ where
                         "New rule overlaps with existing rule at priority {} because of clashing weekdays. \
                         New rule: {:?} to {:?}, Existing rule: {:?} to {:?}",
                         priority, rule.start, rule.end, existing_rule.start, existing_rule.end
-                    )
-                    .into());
+                    ));
                     }
                 }
                 // No overlap + Absolute or Relative
@@ -149,8 +185,16 @@ where
         }
     }
 
-    /// Convert rules to frames, only including rules within a specific time range
-    /// Rules overlapping the range will be truncated to fit within the range
+    /// Converts all added rules into a sequence of non-overlapping, time-sorted frames within the specified range.
+    ///
+    /// This method processes the rules based on their priorities, resolving overlaps by giving precedence
+    /// to higher priority rules. The resulting frames represent distinct time intervals with their corresponding
+    /// availability status and payload.
+    ///
+    /// # Parameters
+    ///
+    /// - `start`: The start datetime of the range to generate frames for. Start is inclusive.
+    /// - `end`: The end datetime of the range to generate frames for. End is exclusive.
     pub fn to_frames_in_range(&mut self, start: NaiveDateTime, end: NaiveDateTime) {
         let mut frames: Vec<Frame<T>> = Vec::new();
 
@@ -297,15 +341,23 @@ where
         self.frames = frames;
     }
 
+    /// Converts all added rules into frames within the specified range using datetime strings.
+    ///
+    /// This is a convenience method that parses the provided datetime strings and calls
+    /// `to_frames_in_range`.
+    ///
+    /// The datetime strings must be in the `"YYMMDDHHMMSS"` format.
+    ///
+    /// # Parameters
+    ///
+    /// - `start_str`: A string slice representing the start datetime in `"YYMMDDHHMMSS"` format. Start is inclusive.
+    /// - `end_str`: A string slice representing the end datetime in `"YYMMDDHHMMSS"` format. End is exclusive.
     pub fn to_frames_in_range_str(&mut self, start: &str, end: &str) {
-        match (
+        if let (Ok(parsed_start), Ok(parsed_end)) = (
             NaiveDateTime::parse_from_str(start, "%y%m%d%H%M%S"),
             NaiveDateTime::parse_from_str(end, "%y%m%d%H%M%S"),
         ) {
-            (Ok(parsed_start), Ok(parsed_end)) => self.to_frames_in_range(parsed_start, parsed_end),
-            _ => {
-                println!("Error parsing datetime strings")
-            }
+            self.to_frames_in_range(parsed_start, parsed_end)
         }
     }
 
@@ -319,6 +371,8 @@ where
         current_frame
     }
 
+    /// Retrieves the frame corresponding to the specified datetime string.
+    /// The datetime string must be in the `"YYMMDDHHMMSS"` format.
     pub fn get_frame_from_str(&self, datetime: &str) -> Option<Frame<T>> {
         match NaiveDateTime::parse_from_str(datetime, "%y%m%d%H%M%S") {
             Ok(parsed_datetime) => self.get_frame(parsed_datetime),
@@ -326,103 +380,14 @@ where
         }
     }
 
-    /// Construct frames from rules
-    pub fn to_frames(&mut self) {
-        let mut frames: Vec<Frame<T>> = Vec::new();
+    /// Retrieves all generated frames.
+    pub fn frames(&self) -> &Vec<Frame<T>> {
+        &self.frames
+    }
 
-        // Process rules from highest to lowest priority
-        for priority in (0..self.rules.len()).rev() {
-            let mut priority_frames: Vec<Frame<T>> = Vec::new();
-
-            // Convert all rules at this priority level to absolute rules
-            let mut absolute_rules: Vec<Rule<T>> = Vec::new();
-            for rule in self.rules[priority].iter() {
-                if let Ok(abs_rules) = relative_to_absolute_rules(rule.clone()) {
-                    absolute_rules.extend(abs_rules);
-                }
-            }
-
-            // Convert absolute rules to frames
-            for rule in absolute_rules {
-                let frame = Frame::new(rule.start, rule.end, rule.off, rule.payload.clone());
-                priority_frames.push(frame);
-            }
-
-            // Merge with existing frames, giving precedence to higher priority frames
-            if frames.is_empty() {
-                frames = priority_frames;
-            } else {
-                let mut merged_frames: Vec<Frame<T>> = Vec::new();
-
-                // Sort both frame lists by start time
-                frames.sort_by(|a, b| a.start.cmp(&b.start));
-                priority_frames.sort_by(|a, b| a.start.cmp(&b.start));
-
-                let mut i = 0;
-                let mut j = 0;
-
-                while i < frames.len() || j < priority_frames.len() {
-                    if i >= frames.len() {
-                        // Add remaining lower priority frames
-                        merged_frames.push(priority_frames[j].clone());
-                        j += 1;
-                        continue;
-                    }
-
-                    if j >= priority_frames.len() {
-                        // Add remaining higher priority frames
-                        merged_frames.push(frames[i].clone());
-                        i += 1;
-                        continue;
-                    }
-
-                    let high_frame = &frames[i];
-                    let low_frame = &priority_frames[j];
-
-                    if high_frame.start >= low_frame.end {
-                        // No overlap, add lower priority frame
-                        merged_frames.push(low_frame.clone());
-                        j += 1;
-                    } else if low_frame.start >= high_frame.end {
-                        // No overlap, add higher priority frame
-                        merged_frames.push(high_frame.clone());
-                        i += 1;
-                    } else {
-                        // Overlap exists - keep higher priority frame
-                        if low_frame.start < high_frame.start {
-                            // Add non-overlapping part of lower priority frame
-                            merged_frames.push(Frame::new(
-                                low_frame.start,
-                                high_frame.start,
-                                low_frame.off,
-                                low_frame.payload.clone(),
-                            ));
-                        }
-
-                        merged_frames.push(high_frame.clone());
-
-                        if low_frame.end > high_frame.end {
-                            // Add non-overlapping part of lower priority frame
-                            merged_frames.push(Frame::new(
-                                high_frame.end,
-                                low_frame.end,
-                                low_frame.off,
-                                low_frame.payload.clone(),
-                            ));
-                        }
-
-                        i += 1;
-                        j += 1;
-                    }
-                }
-
-                frames = merged_frames;
-            }
-        }
-
-        // Sort final frames by start time
-        frames.sort_by(|a, b| a.start.cmp(&b.start));
-        self.frames = frames;
+    /// Clears all generated frames.
+    pub fn clear_frames(&mut self) {
+        self.frames.clear();
     }
 }
 
@@ -626,52 +591,6 @@ mod tests {
             result.unwrap_err(),
             "Priority 0 is reserved for base rule and cannot be modified"
         );
-    }
-
-    #[test]
-    fn test_to_frames_without_range() {
-        let mut availability: Availability<Value> = Availability::new();
-
-        // Lower priority rule (weekdays)
-        let rule1 = Rule::new(
-            create_datetime(2024, 1, 1, 9, 0, 0),
-            create_datetime(2024, 1, 31, 17, 0, 0),
-            Some(MONDAY | TUESDAY | WEDNESDAY | THURSDAY | FRIDAY),
-            false,
-            Some(json!({"type": "regular"})),
-        )
-        .unwrap();
-
-        // Higher priority rule (holiday closure)
-        let rule2 = Rule::new(
-            create_datetime(2024, 1, 15, 0, 0, 0),
-            create_datetime(2024, 1, 16, 0, 0, 0),
-            None,
-            true,
-            Some(json!({"type": "holiday"})),
-        )
-        .unwrap();
-
-        availability.add_rule(rule1, 1).unwrap();
-        availability.add_rule(rule2, 2).unwrap();
-
-        availability.to_frames();
-
-        // Find the frame for January 15th
-        let holiday_frame = availability
-            .frames
-            .iter()
-            .find(|f| f.start.date() == NaiveDate::from_ymd_opt(2024, 1, 15).unwrap())
-            .unwrap();
-
-        // Should have holiday payload and be closed
-        assert_eq!(
-            holiday_frame.payload.as_ref().unwrap()["type"]
-                .as_str()
-                .unwrap(),
-            "holiday"
-        );
-        assert!(holiday_frame.off);
     }
 
     #[test]
