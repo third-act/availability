@@ -1,6 +1,6 @@
 use availability::availability::Availability;
 use availability::rulebuilder::RuleBuilder;
-use chrono::{Datelike, NaiveDate, NaiveDateTime};
+use chrono::{NaiveDate, NaiveDateTime};
 use serde::{Deserialize, Serialize};
 
 fn main() {
@@ -67,33 +67,7 @@ fn main() {
     // Display the results
     println!("Store Schedule Overview:");
     println!("=======================");
-    for (index, frame) in store_availability.frames.iter().enumerate() {
-        if let Some(hours) = &frame.payload {
-            println!(
-                "Frame {}: {} to {} {}",
-                index + 1,
-                frame.start.format("%Y-%m-%d %H:%M"),
-                frame.end.format("%Y-%m-%d %H:%M"),
-                frame.start.weekday()
-            );
-            println!("Status: {}", if frame.off { "CLOSED" } else { "OPEN" });
-            println!("Staff Count: {}", hours.staff_count);
-            println!("Manager: {}", hours.manager_on_duty);
-            println!("---");
-        } else {
-            println!(
-                "Frame {}: {} to {} {}",
-                index + 1,
-                frame.start.format("%Y-%m-%d %H:%M"),
-                frame.end.format("%Y-%m-%d %H:%M"),
-                frame.start.weekday()
-            );
-            println!("Status: CLOSED (base rule)");
-            println!("---");
-        }
-    }
-    println!("=======================");
-    println!("End of Schedule\n");
+    println!("{}", store_availability);
 }
 
 fn create_datetime(

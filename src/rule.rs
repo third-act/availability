@@ -1,9 +1,13 @@
+use std::fmt;
+
 use chrono::{naive, Datelike, NaiveDate, NaiveDateTime, NaiveTime, Weekday};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     crate_parameters::{BASE_RULE_YEAR_END, BASE_RULE_YEAR_START},
-    weekdays::{FRIDAY, MONDAY, SATURDAY, SUNDAY, THURSDAY, TUESDAY, WEDNESDAY},
+    weekdays::{
+        get_days_from_mask, FRIDAY, MONDAY, SATURDAY, SUNDAY, THURSDAY, TUESDAY, WEDNESDAY,
+    },
 };
 
 #[derive(Debug, Clone)]
@@ -16,6 +20,38 @@ where
     pub weekdays: Option<u8>,
     pub off: bool,
     pub payload: Option<T>,
+}
+
+impl<T> fmt::Display for Rule<T>
+where
+    T: Serialize + for<'de> Deserialize<'de> + Clone,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let status = if self.off { "Off" } else { "On" };
+        let weekdays_str = match self.weekdays {
+            Some(mask) => {
+                let days = get_days_from_mask(mask);
+                if days.is_empty() {
+                    "All Days".to_string()
+                } else {
+                    days.join(", ")
+                }
+            }
+            None => "No Specific Days".to_string(),
+        };
+        let payload_str = match &self.payload {
+            Some(payload) => match serde_json::to_string(payload) {
+                Ok(s) => s,
+                Err(_) => "<invalid payload>".to_string(),
+            },
+            None => "None".to_string(),
+        };
+        write!(
+            f,
+            "Rule [Start: {}, End: {}, Weekdays: {}, Status: {}, Payload: {}]",
+            self.start, self.end, weekdays_str, status, payload_str
+        )
+    }
 }
 
 impl<T> Rule<T>
@@ -44,25 +80,13 @@ where
     /// Check if rule is active at the given NaiveDateTime.
     pub fn is_active(&self, date_time: NaiveDateTime) -> bool {
         match self.is_absolute() {
-            true => {
-                if self.is_date_time_within(date_time) && self.is_time_within(date_time.time()) {
-                    true
-                } else {
-                    false
-                }
-            }
+            true => self.is_date_time_within(date_time) && self.is_time_within(date_time.time()),
             false => {
                 if self.is_weekday_enabled(date_time) {
                     if self.off {
                         false
                     } else {
-                        if self.is_date_time_within(date_time)
-                            && self.is_time_within(date_time.time())
-                        {
-                            true
-                        } else {
-                            false
-                        }
+                        self.is_date_time_within(date_time) && self.is_time_within(date_time.time())
                     }
                 } else {
                     false
@@ -77,7 +101,7 @@ where
         if self.off {
             return false;
         }
-        return self.is_active(date_time);
+        self.is_active(date_time)
     }
 
     /// Check if two rules overlap in NaiveDateTime.
@@ -192,12 +216,7 @@ where
         let current_datetime = current_day.and_hms_opt(0, 0, 0).unwrap();
 
         if rule.is_weekday_enabled(current_datetime) {
-            // For the first day, use original start time
-            let start_time = if current_day == rule.start.date() {
-                rule.start.time()
-            } else {
-                rule.start.time()
-            };
+            let start_time = rule.start.time();
 
             // Create the end time for this day
             let end_time = rule.end.time();

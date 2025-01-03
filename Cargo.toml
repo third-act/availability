@@ -2,6 +2,9 @@
 name = "availability"
 version = "0.1.0"
 edition = "2021"
+authors = ["Rasmus Hogslätt <r.hogslatt@gmail.com>"]
+description = "A crate for managing time-based rules and schedules with priority-based overrides."
+license = "MIT"
 
 [dependencies]
 chrono = "0.4.39"
