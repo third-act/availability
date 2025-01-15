@@ -4,8 +4,10 @@ use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    availability,
     frame::Frame,
     rule::{relative_to_absolute_rules, Rule},
+    rulebuilder::RuleBuilder,
 };
 
 /// Represents the availability schedule with priority-based rules.
@@ -179,7 +181,7 @@ where
     }
 
     pub fn remove_rule_by_str(&mut self, priority: usize, datetime: &str) -> Option<Rule<T>> {
-        match NaiveDateTime::parse_from_str(datetime, "%y%m%d%H%M%S") {
+        match NaiveDateTime::parse_from_str(datetime, "%Y-%m-%d %H:%M:%S") {
             Ok(parsed_datetime) => self.remove_rule_by_datetime(priority, parsed_datetime),
             Err(_) => None,
         }
@@ -354,8 +356,8 @@ where
     /// - `end_str`: A string slice representing the end datetime in `"YYMMDDHHMMSS"` format. End is exclusive.
     pub fn to_frames_in_range_str(&mut self, start: &str, end: &str) {
         if let (Ok(parsed_start), Ok(parsed_end)) = (
-            NaiveDateTime::parse_from_str(start, "%y%m%d%H%M%S"),
-            NaiveDateTime::parse_from_str(end, "%y%m%d%H%M%S"),
+            NaiveDateTime::parse_from_str(start, "%Y-%m-%d %H:%M:%S"),
+            NaiveDateTime::parse_from_str(end, "%Y-%m-%d %H:%M:%S"),
         ) {
             self.to_frames_in_range(parsed_start, parsed_end)
         }
@@ -374,7 +376,7 @@ where
     /// Retrieves the frame corresponding to the specified datetime string.
     /// The datetime string must be in the `"YYMMDDHHMMSS"` format.
     pub fn get_frame_from_str(&self, datetime: &str) -> Option<Frame<T>> {
-        match NaiveDateTime::parse_from_str(datetime, "%y%m%d%H%M%S") {
+        match NaiveDateTime::parse_from_str(datetime, "%Y-%m-%d %H:%M:%S") {
             Ok(parsed_datetime) => self.get_frame(parsed_datetime),
             Err(_) => None,
         }
@@ -542,15 +544,15 @@ mod tests {
         // Test removing by datetime as string
         availability.add_rule(rule.clone(), 1).unwrap();
         let removed = availability
-            .remove_rule_by_str(1, &rule.start.format("%y%m%d%H%M%S").to_string())
+            .remove_rule_by_str(1, &rule.start.format("%Y-%m-%d %H:%M:%S").to_string())
             .unwrap();
         assert_eq!(removed.start, rule.start);
 
         // Test removing by datetime as str for two overlapping relative rules
         // with different weekdays
         let rule1 = RuleBuilder::new()
-            .start_time_str("240101090000")
-            .end_time_str("240131170000")
+            .start_time_str("2024-01-01 09:00:00")
+            .end_time_str("2024-01-31 17:00:00")
             .monday()
             .tuesday()
             .wednesday()
@@ -558,8 +560,8 @@ mod tests {
             .build()
             .unwrap();
         let rule2 = RuleBuilder::new()
-            .start_time_str("240101090000")
-            .end_time_str("240131170000")
+            .start_time_str("2024-01-01 09:00:00")
+            .end_time_str("2024-01-31 17:00:00")
             .thursday()
             .friday()
             .payload(json!({"type": "special"}))
@@ -567,7 +569,9 @@ mod tests {
             .unwrap();
         availability.add_rule(rule1, 2).unwrap();
         availability.add_rule(rule2, 2).unwrap();
-        let removed = availability.remove_rule_by_str(2, "240101120000").unwrap();
+        let removed = availability
+            .remove_rule_by_str(2, "2024-01-01 12:00:00")
+            .unwrap();
         assert_eq!(
             removed.payload.unwrap()["type"].as_str().unwrap(),
             "regular"

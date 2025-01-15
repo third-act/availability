@@ -2,7 +2,9 @@ use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
 use crate::rule::Rule;
-use crate::weekdays::{FRIDAY, MONDAY, SATURDAY, SUNDAY, THURSDAY, TUESDAY, WEDNESDAY};
+use crate::weekdays::{
+    ALL_WEEKDAYS, FRIDAY, MONDAY, SATURDAY, SUNDAY, THURSDAY, TUESDAY, WEDNESDAY,
+};
 
 #[derive(Default)]
 pub struct RuleBuilder<T>
@@ -63,8 +65,7 @@ where
     /// This method converts the provided `NaiveDateTime` into the expected
     /// `"YYMMDDHHMMSS"` string format internally.
     pub fn start_datetime(mut self, datetime: NaiveDateTime) -> Self {
-        // Convert the datetime to the expected string format
-        let datetime_str = datetime.format("%y%m%d%H%M%S").to_string();
+        let datetime_str = datetime.format("%Y-%m-%d %H:%M:%S").to_string();
         self.start_str = Some(datetime_str);
         self
     }
@@ -74,8 +75,7 @@ where
     /// This method converts the provided `NaiveDateTime` into the expected
     /// `"YYMMDDHHMMSS"` string format internally.
     pub fn end_datetime(mut self, datetime: NaiveDateTime) -> Self {
-        // Convert the datetime to the expected string format
-        let datetime_str = datetime.format("%y%m%d%H%M%S").to_string();
+        let datetime_str = datetime.format("%Y-%m-%d %H:%M:%S").to_string();
         self.end_str = Some(datetime_str);
         self
     }
@@ -153,6 +153,11 @@ where
         self.weekdays = Some(val);
         self
     }
+    /// Adds all weekdays to the set of active weekdays for the rule.
+    pub fn all_weekdays(mut self) -> Self {
+        self.weekdays = Some(ALL_WEEKDAYS);
+        self
+    }
 
     /// Sets whether the rule is "off" or "on".
     ///
@@ -223,11 +228,17 @@ where
             .ok_or("End time is required and was never set")?;
 
         // Validate they are each 12 chars
-        if start_str.len() != 12 {
-            return Err(format!("Invalid start time format: {}", start_str));
+        if !start_str.contains('-') || start_str.len() != 19 {
+            return Err(format!(
+                "Invalid start time format: {}. Expected format: YYYY-MM DD-HH:MM:SS",
+                start_str
+            ));
         }
-        if end_str.len() != 12 {
-            return Err(format!("Invalid end time format: {}", end_str));
+        if !end_str.contains('-') || end_str.len() != 19 {
+            return Err(format!(
+                "Invalid end time format: {}. Expected format: YYYY-MM-DD HH:MM:SS",
+                end_str
+            ));
         }
 
         // Parse them both
@@ -250,35 +261,29 @@ where
     }
 }
 
-/// Helper function to parse a 12-char datetime string of form "YYMMDDHHMMSS"
-fn parse_datetime(datetime_str: &str) -> Result<NaiveDateTime, String> {
-    let year = format!("20{}", &datetime_str[0..2])
-        .parse::<i32>()
-        .map_err(|_| "Invalid year")?;
-    let month = datetime_str[2..4]
-        .parse::<u32>()
-        .map_err(|_| "Invalid month")?;
-    let day = datetime_str[4..6]
-        .parse::<u32>()
-        .map_err(|_| "Invalid day")?;
-    let hour = datetime_str[6..8]
-        .parse::<u32>()
-        .map_err(|_| "Invalid hour")?;
-    let minute = datetime_str[8..10]
-        .parse::<u32>()
-        .map_err(|_| "Invalid minute")?;
-    let second = datetime_str[10..12]
-        .parse::<u32>()
-        .map_err(|_| "Invalid second")?;
+/// Helper function to parse a datetime string in the form "YYYY-MM-DD HH:MM:SS"
+// fn parse_datetime(datetime_str: &str) -> Result<NaiveDateTime, String> {
+//     // Basic length check
+//     if datetime_str.len() != 19 {
+//         return Err(format!(
+//             "Expected 19 characters in datetime, got {}. String: {:?}",
+//             datetime_str.len(),
+//             datetime_str
+//         ));
+//     }
 
-    chrono::NaiveDate::from_ymd_opt(year, month, day)
-        .ok_or("Invalid date".to_string())?
-        .and_hms_opt(hour, minute, second)
-        .ok_or("Invalid time".to_string())
+//     // Parse as "YYYY-MM-DD HH:MM:SS"
+//     NaiveDateTime::parse_from_str(datetime_str, "%Y-%m-%d %H:%M:%S")
+//         .map_err(|e| format!("Invalid datetime: {}", e))
+// }
+fn parse_datetime(datetime_str: &str) -> Result<NaiveDateTime, chrono::ParseError> {
+    NaiveDateTime::parse_from_str(datetime_str, "%Y-%m-%d %H:%M:%S")
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::weekdays::get_days_from_mask;
+
     use super::*;
     use chrono::NaiveDateTime;
     use serde_json::json;
@@ -286,16 +291,19 @@ mod tests {
     #[test]
     fn test_builder_basic_functionality() {
         let rule = RuleBuilder::<String>::new()
-            .start_time_str("240101090000") // 2024-01-01 09:00:00
-            .end_time_str("240101170000") // 2024-01-01 17:00:00
+            .start_time_str("2024-01-01 09:00:00") // 2024-01-01 09:00:00
+            .end_time_str("2024-01-01 17:00:00") // 2024-01-01 17:00:00
             .build()
             .unwrap();
 
         assert_eq!(
-            rule.start.format("%y%m%d%H%M%S").to_string(),
-            "240101090000"
+            rule.start.format("%Y-%m-%d %H:%M:%S").to_string(),
+            "2024-01-01 09:00:00"
         );
-        assert_eq!(rule.end.format("%y%m%d%H%M%S").to_string(), "240101170000");
+        assert_eq!(
+            rule.end.format("%Y-%m-%d %H:%M:%S").to_string(),
+            "2024-01-01 17:00:00"
+        );
         assert!(rule.weekdays.is_none());
         assert!(!rule.off);
         assert!(rule.payload.is_none());
@@ -303,8 +311,10 @@ mod tests {
 
     #[test]
     fn test_builder_with_datetime() {
-        let start = NaiveDateTime::parse_from_str("240101090000", "%y%m%d%H%M%S").unwrap();
-        let end = NaiveDateTime::parse_from_str("240101170000", "%y%m%d%H%M%S").unwrap();
+        let start =
+            NaiveDateTime::parse_from_str("2024-01-01 09:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
+        let end =
+            NaiveDateTime::parse_from_str("2024-01-01 17:00:00", "%Y-%m-%d %H:%M:%S").unwrap();
 
         let rule = RuleBuilder::<String>::new()
             .start_datetime(start)
@@ -319,8 +329,8 @@ mod tests {
     #[test]
     fn test_builder_weekdays_bulk() {
         let rule = RuleBuilder::<String>::new()
-            .start_time_str("240101090000")
-            .end_time_str("240101170000")
+            .start_time_str("2024-01-01 09:00:00")
+            .end_time_str("2024-01-01 17:00:00")
             .weekdays(&["monday", "wednesday", "friday"])
             .build()
             .unwrap();
@@ -329,8 +339,8 @@ mod tests {
 
         // Test with short forms
         let rule = RuleBuilder::<String>::new()
-            .start_time_str("240101090000")
-            .end_time_str("240101170000")
+            .start_time_str("2024-01-01 09:00:00")
+            .end_time_str("2024-01-01 17:00:00")
             .weekdays(&["mon", "wed", "fri"])
             .build()
             .unwrap();
@@ -341,8 +351,8 @@ mod tests {
     #[test]
     fn test_builder_individual_weekdays() {
         let rule = RuleBuilder::<String>::new()
-            .start_time_str("240101090000")
-            .end_time_str("240101170000")
+            .start_time_str("2024-01-01 09:00:00")
+            .end_time_str("2024-01-01 17:00:00")
             .monday()
             .wednesday()
             .friday()
@@ -356,8 +366,8 @@ mod tests {
     fn test_builder_with_payload() {
         let payload = json!({"status": "active"});
         let rule = RuleBuilder::new()
-            .start_time_str("240101090000")
-            .end_time_str("240101170000")
+            .start_time_str("2024-01-01 09:00:00")
+            .end_time_str("2024-01-01 17:00:00")
             .payload(payload.clone())
             .build()
             .unwrap();
@@ -368,8 +378,8 @@ mod tests {
     #[test]
     fn test_builder_with_off() {
         let rule = RuleBuilder::<String>::new()
-            .start_time_str("240101090000")
-            .end_time_str("240101170000")
+            .start_time_str("2024-01-01 09:00:00")
+            .end_time_str("2024-01-01 17:00:00")
             .off(true)
             .build()
             .unwrap();
@@ -380,8 +390,8 @@ mod tests {
     #[test]
     fn test_builder_invalid_weekdays() {
         let result = RuleBuilder::<String>::new()
-            .start_time_str("240101090000")
-            .end_time_str("240101170000")
+            .start_time_str("2024-01-01 09:00:00")
+            .end_time_str("2024-01-01 17:00:00")
             .weekdays(&["monday", "invalid_day"])
             .build();
 
@@ -392,25 +402,29 @@ mod tests {
     #[test]
     fn test_parse_datetime() {
         // Test valid datetime
-        let result = parse_datetime("240101090000");
+        let result = parse_datetime("2024-01-01 09:00:00");
         assert!(result.is_ok());
         let dt = result.unwrap();
-        assert_eq!(dt.format("%y%m%d%H%M%S").to_string(), "240101090000");
+        assert_eq!(
+            dt.format("%Y-%m-%d %H:%M:%S").to_string(),
+            "2024-01-01 09:00:00"
+        );
 
         // Test invalid cases
         assert!(parse_datetime("invalid").is_err()); // Too short
-        assert!(parse_datetime("240001090000").is_err()); // Invalid month
-        assert!(parse_datetime("240132090000").is_err()); // Invalid day
-        assert!(parse_datetime("240101250000").is_err()); // Invalid hour
-        assert!(parse_datetime("240101096000").is_err()); // Invalid minute
-        assert!(parse_datetime("240101090060").is_err()); // Invalid second
+        assert!(parse_datetime("2024-00-01 09:00:00").is_err()); // Invalid month
+        assert!(parse_datetime("2024-01-32 09:00:00").is_err()); // Invalid day
+        assert!(parse_datetime("2024-01-01 25:00:00").is_err()); // Invalid hour
+        assert!(parse_datetime("2024-01-01 09:60:00").is_err()); // Invalid minute
+        assert!(parse_datetime("2024-01-01 09:00:61").is_err()); // Invalid second
+        assert!(!parse_datetime("2024-01-01 09:00:60").is_err()); // Chrono allows leap seconds
     }
 
     #[test]
     fn test_builder_validation_errors() {
         // Missing start time
         let result = RuleBuilder::<String>::new()
-            .end_time_str("240101170000")
+            .end_time_str("2024-01-01 17:00:00")
             .build();
         assert!(result.is_err());
         assert_eq!(
@@ -420,7 +434,7 @@ mod tests {
 
         // Missing end time
         let result = RuleBuilder::<String>::new()
-            .start_time_str("240101090000")
+            .start_time_str("2024-01-01 09:00:00")
             .build();
         assert!(result.is_err());
         assert_eq!(
@@ -431,15 +445,15 @@ mod tests {
         // Invalid datetime format (too short)
         let result = RuleBuilder::<String>::new()
             .start_time_str("2401")
-            .end_time_str("240101170000")
+            .end_time_str("2024-01-01 17:00:00")
             .build();
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Invalid start time format"));
 
         // End before start
         let result = RuleBuilder::<String>::new()
-            .start_time_str("240101170000")
-            .end_time_str("240101090000")
+            .start_time_str("2024-01-01 17:00:00")
+            .end_time_str("2024-01-01 09:00:00")
             .build();
         assert!(result.is_err());
         assert_eq!(
@@ -449,8 +463,8 @@ mod tests {
 
         // Equal start and end
         let result = RuleBuilder::<String>::new()
-            .start_time_str("240101090000")
-            .end_time_str("240101090000")
+            .start_time_str("2024-01-01 09:00:00")
+            .end_time_str("2024-01-01 09:00:00")
             .build();
         assert!(result.is_err());
         assert_eq!(
@@ -463,8 +477,8 @@ mod tests {
     fn test_idempotent_weekday_setting() {
         // Test single day multiple times
         let rule = RuleBuilder::<String>::new()
-            .start_time_str("240101090000")
-            .end_time_str("240101170000")
+            .start_time_str("2024-01-01 09:00:00")
+            .end_time_str("2024-01-01 17:00:00")
             .saturday()
             .saturday()
             .saturday()
@@ -476,8 +490,8 @@ mod tests {
 
         // Test multiple days with repetition
         let rule = RuleBuilder::<String>::new()
-            .start_time_str("240101090000")
-            .end_time_str("240101170000")
+            .start_time_str("2024-01-01 09:00:00")
+            .end_time_str("2024-01-01 17:00:00")
             .monday()
             .wednesday()
             .monday() // Repeated monday
@@ -488,5 +502,31 @@ mod tests {
 
         // Should have exactly these three days set
         assert_eq!(rule.weekdays, Some(MONDAY | WEDNESDAY | FRIDAY));
+    }
+    #[test]
+
+    fn test_builder_all_weekdays() {
+        let rule = RuleBuilder::<String>::new()
+            .start_time_str("2024-01-01 09:00:00")
+            .end_time_str("2024-01-01 17:00:00")
+            .all_weekdays()
+            .build()
+            .unwrap();
+
+        assert_eq!(rule.weekdays, Some(ALL_WEEKDAYS));
+
+        // Verify that all days are set using get_days_from_mask
+        assert_eq!(
+            get_days_from_mask(rule.weekdays.unwrap()),
+            vec![
+                "monday",
+                "tuesday",
+                "wednesday",
+                "thursday",
+                "friday",
+                "saturday",
+                "sunday"
+            ]
+        );
     }
 }

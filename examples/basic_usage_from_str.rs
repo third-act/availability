@@ -14,8 +14,8 @@ fn main() {
 
     // Regular weekday hours (Priority 1)
     let weekday_hours = RuleBuilder::new()
-        .start_time_str("240101090000") // 2024-01-01 09:00:00
-        .end_time_str("240131170000") // 2024-01-31 17:00:00
+        .start_time_str("2024-01-01 09:00:00") // 2024-01-01 09:00:00
+        .end_time_str("2024-01-31 17:00:00") // 2024-01-31 17:00:00
         .monday()
         .tuesday()
         .wednesday()
@@ -30,8 +30,8 @@ fn main() {
 
     // Extended hours for New Year's sale (Priority 2 - overrides regular hours)
     let new_year_sale = RuleBuilder::new()
-        .start_time_str("240101090000") // 2024-01-01 09:00:00
-        .end_time_str("240107200000") // 2024-01-07 20:00:00
+        .start_time_str("2024-01-01 09:00:00") // 2024-01-01 09:00:00
+        .end_time_str("2024-01-07 20:00:00") // 2024-01-07 20:00:00
         .weekdays(&["mon", "tue", "wed", "thu"])
         .payload(StoreHours {
             staff_count: 5,
@@ -42,8 +42,8 @@ fn main() {
 
     // Store closes for inventory checks (Priority 3 - highest priority)
     let inventory_day = RuleBuilder::new()
-        .start_time_str("240115000000") // 2024-01-15 00:00:00
-        .end_time_str("240116000000") // 2024-01-16 00:00:00
+        .start_time_str("2024-01-15 00:00:00") // 2024-01-15 00:00:00
+        .end_time_str("2024-01-16 00:00:00") // 2024-01-16 00:00:00
         // No weekdays specified makes it an absolute rule
         .off(true)
         .payload(StoreHours {
@@ -59,7 +59,7 @@ fn main() {
     store_availability.add_rule(inventory_day, 3).unwrap();
 
     // Convert rules to frames between 2024-01-01 and 2024-01-24
-    store_availability.to_frames_in_range_str("240101000000", "240124000000");
+    store_availability.to_frames_in_range_str("2024-01-01 00:00:00", "2024-01-24 00:00:00");
 
     // Display the results
     println!("Store Schedule Overview:");

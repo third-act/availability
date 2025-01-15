@@ -5,6 +5,7 @@ pub const THURSDAY: u8 = 8;
 pub const FRIDAY: u8 = 16;
 pub const SATURDAY: u8 = 32;
 pub const SUNDAY: u8 = 64;
+pub const ALL_WEEKDAYS: u8 = MONDAY | TUESDAY | WEDNESDAY | THURSDAY | FRIDAY | SATURDAY | SUNDAY;
 
 pub fn get_days_from_mask(mask: u8) -> Vec<&'static str> {
     let mut days = Vec::new();

@@ -48,7 +48,6 @@ When all rules are added, they are resolved and converted into a sequence of non
 
 ```rust
 use availability::{availability::Availability, rulebuilder::RuleBuilder};
-use chrono::Datelike;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -64,8 +63,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 2) Define rules using RuleBuilder (string-based times in "YYMMDDHHMMSS" format).
     //    - Priority 1 (lowest): Open Mon-Fri from 09:00 to 17:00 (Jan 1 - Jan 31)
     let weekday_rule = RuleBuilder::new()
-        .start_time_str("240101090000") // 2024-01-01 09:00:00
-        .end_time_str("240131170000") // 2024-01-31 17:00:00
+        .start_time_str("2024-01-01 09:00:00") // 2024-01-01 09:00:00
+        .end_time_str("2024-01-31 17:00:00") // 2024-01-31 17:00:00
         .monday()
         .tuesday()
         .wednesday()
@@ -79,8 +78,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     //    - Priority 2: Special sale hours override (Jan 1 - Jan 7), open until 20:00
     let sale_rule = RuleBuilder::new()
-        .start_time_str("240101090000") // 2024-01-01 09:00:00
-        .end_time_str("240107200000") // 2024-01-07 20:00:00
+        .start_time_str("2024-01-01 09:00:00") // 2024-01-01 09:00:00
+        .end_time_str("2024-01-07 20:00:00") // 2024-01-07 20:00:00
         .weekdays(&["mon", "tue", "wed", "thu", "fri"])
         .payload(StoreHours {
             staff_count: 5,
@@ -90,8 +89,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     //    - Priority 3: Complete closure for inventory (Jan 15 - Jan 16)
     let inventory_rule = RuleBuilder::new()
-        .start_time_str("240105000000") // 2024-01-15 00:00:00
-        .end_time_str("240106000000") // 2024-01-16 00:00:00
+        .start_time_str("2024-01-05 00:00:00") // 2024-01-15 00:00:00
+        .end_time_str("2024-01-06 00:00:00") // 2024-01-16 00:00:00
         .off(true) // Off => store closed
         .payload(StoreHours {
             staff_count: 2,
@@ -105,7 +104,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     store_availability.add_rule(inventory_rule, 3)?;
 
     // 4) Convert the layered rules into "frames" that cover only the specified date range.
-    store_availability.to_frames_in_range_str("240101000000", "240124235959");
+    store_availability.to_frames_in_range_str("2024-01-01 00:00:00", "2024-01-24 23:59:59");
 
     // Optional) Print out the resulting frames:
     println!("Store Schedule Overview:");
@@ -116,7 +115,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Get frames from datetime:");
     println!("=======================");
     let frame = store_availability
-        .get_frame_from_str("240101090000")
+        .get_frame_from_str("2024-01-01 09:00:00")
         .unwrap();
     println!("Frame at 2024-01-01 09:00:00 is: {}", frame.off);
     if let Some(payload) = &frame.payload {
