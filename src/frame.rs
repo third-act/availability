@@ -1,6 +1,6 @@
 use std::fmt;
 
-use chrono::NaiveDateTime;
+use chrono::{Duration, NaiveDateTime};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
@@ -27,10 +27,16 @@ where
             },
             None => "None".to_string(),
         };
+        let duration = self.duration();
+        let total_seconds = duration.num_seconds();
+        let hours = total_seconds / 3600;
+        let minutes = (total_seconds % 3600) / 60;
+        let seconds = total_seconds % 60;
+
         write!(
             f,
-            "Frame [Start: {}, End: {}, Status: {}, Payload: {}]",
-            self.start, self.end, status, payload_str
+            "Frame spans {:02}:{:02}:{:02} [Start: {}, End: {}, Status: {}, Payload: {}]",
+            hours, minutes, seconds, self.start, self.end, status, payload_str
         )
     }
 }
@@ -71,5 +77,9 @@ where
 
     pub fn payload(&self) -> Option<T> {
         self.payload.clone()
+    }
+
+    pub fn duration(&self) -> Duration {
+        self.end.signed_duration_since(self.start)
     }
 }

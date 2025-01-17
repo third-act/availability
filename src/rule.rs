@@ -6,7 +6,8 @@ use serde::{Deserialize, Serialize};
 use crate::{
     crate_parameters::{BASE_RULE_YEAR_END, BASE_RULE_YEAR_START},
     weekdays::{
-        get_days_from_mask, FRIDAY, MONDAY, SATURDAY, SUNDAY, THURSDAY, TUESDAY, WEDNESDAY,
+        get_days_from_mask, ALL_WEEKDAYS, FRIDAY, MONDAY, SATURDAY, SUNDAY, THURSDAY, TUESDAY,
+        WEDNESDAY,
     },
 };
 
@@ -129,17 +130,30 @@ where
     /// True if rule is absolute (i.e. it has not weekdays)
     pub fn is_absolute(&self) -> bool {
         match self.weekdays {
-            Some(weekdays) => weekdays == 0,
-            None => true,
+            None => true,    // No weekdays field => purely absolute
+            Some(0) => true, // Mask=0 => user set weekdays=0 => treat like absolute
+            Some(weekdays) => {
+                // If "all weekdays" + time range check
+                if weekdays == ALL_WEEKDAYS && self.start.date() != self.end.date() {
+                    if self.start.time() == self.end.time() {
+                        return true;
+                    }
+                    // Check for full day range (00:00:00 to 23:59:59)
+                    if self.start.time() == NaiveTime::from_hms_opt(0, 0, 0).unwrap() {
+                        let end_t = self.end.time();
+                        if end_t == NaiveTime::from_hms_opt(23, 59, 59).unwrap() {
+                            return true;
+                        }
+                    }
+                }
+                false
+            }
         }
     }
 
     /// True if rule is relative (i.e. it has weekdays)
     pub fn is_relative(&self) -> bool {
-        match self.weekdays {
-            Some(weekdays) => weekdays != 0,
-            None => false,
-        }
+        !self.is_absolute()
     }
 
     /// True if NaiveDateTime is within entire range of rule.

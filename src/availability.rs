@@ -4,10 +4,8 @@ use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    availability,
     frame::Frame,
     rule::{relative_to_absolute_rules, Rule},
-    rulebuilder::RuleBuilder,
 };
 
 /// Represents the availability schedule with priority-based rules.
@@ -118,6 +116,11 @@ where
         Ok(())
     }
 
+    /// Retrieves all generated frames
+    pub fn get_frames(&self) -> &Vec<Frame<T>> {
+        &self.frames
+    }
+
     /// Remove rule at specific priority and index
     pub fn remove_rule_by_index(
         &mut self,
@@ -214,25 +217,36 @@ where
 
             // Convert absolute rules to frames
             for rule in absolute_rules {
+                if rule.end <= start || rule.start >= end {
+                    continue;
+                }
                 // Rule is completely within range
                 if rule.start >= start && rule.end < end {
                     let frame = Frame::new(rule.start, rule.end, rule.off, rule.payload.clone());
-                    priority_frames.push(frame);
+                    if frame.duration().num_seconds() > 0 {
+                        priority_frames.push(frame);
+                    }
                 }
                 // Rule starts before range but ends within range
                 else if rule.start < start && rule.end < end {
                     let frame = Frame::new(start, rule.end, rule.off, rule.payload.clone());
-                    priority_frames.push(frame);
+                    if frame.duration().num_seconds() > 0 {
+                        priority_frames.push(frame);
+                    }
                 }
                 // Rule starts within range but ends after range
                 else if rule.start >= start && rule.start < end && rule.end >= end {
                     let frame = Frame::new(rule.start, end, rule.off, rule.payload.clone());
-                    priority_frames.push(frame);
+                    if frame.duration().num_seconds() > 0 {
+                        priority_frames.push(frame);
+                    }
                 }
                 // Rule starts before range and ends after range
                 else if rule.start < start && rule.end >= end {
                     let frame = Frame::new(start, end, rule.off, rule.payload.clone());
-                    priority_frames.push(frame);
+                    if frame.duration().num_seconds() > 0 {
+                        priority_frames.push(frame);
+                    }
                 }
             }
 
@@ -279,24 +293,31 @@ where
                         // Overlap exists - keep higher priority frame
                         if low_frame.start < high_frame.start {
                             // Add non-overlapping part of lower priority frame
-                            merged_frames.push(Frame::new(
+                            let frame = Frame::new(
                                 low_frame.start,
                                 high_frame.start,
                                 low_frame.off,
                                 low_frame.payload.clone(),
-                            ));
+                            );
+                            if frame.duration().num_seconds() > 0 {
+                                merged_frames.push(frame);
+                            }
                         }
 
-                        merged_frames.push(high_frame.clone());
-
+                        if high_frame.duration().num_seconds() > 0 {
+                            merged_frames.push(high_frame.clone());
+                        }
                         if low_frame.end > high_frame.end {
                             // Add non-overlapping part of lower priority frame
-                            merged_frames.push(Frame::new(
+                            let frame = Frame::new(
                                 high_frame.end,
                                 low_frame.end,
                                 low_frame.off,
                                 low_frame.payload.clone(),
-                            ));
+                            );
+                            if frame.duration().num_seconds() > 0 {
+                                merged_frames.push(frame);
+                            }
                         }
 
                         i += 1;
@@ -312,7 +333,7 @@ where
         // Sort final frames by start time
         frames.sort_by(|a, b| a.start.cmp(&b.start));
 
-        // Insert base rule if first frame from coustom rules is not at start
+        // Insert base rule if first frame from custom rules is not at start
         if !frames.is_empty() && frames[0].start > start {
             frames.insert(0, Frame::new(start, frames[0].start, true, None));
         }
@@ -332,7 +353,10 @@ where
         // Fill trailing gap with base rule
         if let Some(last_frame) = frames.last() {
             if last_frame.end < end {
-                frames.push(Frame::new(last_frame.end, end, true, None));
+                let frame: Frame<T> = Frame::new(last_frame.end, end, true, None);
+                if frame.duration().num_seconds() > 0 {
+                    frames.push(frame);
+                }
             }
         }
         // If no frames at all were built, create one that covers [start, end) with the base rule
@@ -601,7 +625,7 @@ mod tests {
     fn test_to_frames_in_range() {
         use serde_json::json;
 
-        // 1) **No custom rules**: everything should be base-rule "off"
+        // 1) No custom rules: everything should be base-rule "off"
         {
             let mut availability: Availability<Value> = Availability::new();
             let start = create_datetime(2024, 1, 1, 0, 0, 0);
@@ -620,7 +644,7 @@ mod tests {
             assert!(frame.off);
         }
 
-        // 2) **Single custom rule covers a subset** of the day, should fill gaps with base rule
+        // 2) Single custom rule covers a subset of the day, should fill gaps with base rule
         {
             let mut availability: Availability<Value> = Availability::new();
             // Add a single open rule from 09:00 to 12:00
@@ -678,7 +702,7 @@ mod tests {
             assert!(availability.frames[2].off);
         }
 
-        // 3) **Two overlapping rules**:
+        // 3) Two overlapping rules:
         //    - Lower priority “open” all day
         //    - Higher priority “closed” from 10:00 to 11:00
         //    => result should have open from 09:00..10:00, closed 10:00..11:00, open 11:00..12:00
@@ -689,7 +713,7 @@ mod tests {
                 create_datetime(2024, 1, 1, 9, 0, 0),
                 create_datetime(2024, 1, 1, 12, 0, 0),
                 None,
-                false, // open
+                false,
                 Some(json!({"info": "low-prio open"})),
             )
             .unwrap();
@@ -790,5 +814,144 @@ mod tests {
             );
             assert!(availability.frames[1].off);
         }
+    }
+
+    #[test]
+    fn crash_test() {
+        let mut availability: Availability<()> = Availability::new();
+        let rule: Rule<()> = RuleBuilder::new()
+            .start_time_str("1970-01-01 00:00:00")
+            .end_time_str("2999-12-30 01:00:00")
+            .all_weekdays()
+            .off(false)
+            .build()
+            .unwrap();
+        let _ = availability.add_rule(rule, 1);
+        availability.to_frames_in_range_str("2024-10-29 13:20:27", "2024-11-01 09:20:00");
+        let frames = availability.get_frames();
+        assert_eq!(frames.len(), 7);
+    }
+
+    #[test]
+    fn crash_test2() {
+        let mut availability: Availability<()> = Availability::new();
+        let rule: Rule<()> = RuleBuilder::new()
+            .start_time_str("1970-01-01 00:00:00")
+            .end_time_str("2999-12-30 00:00:00")
+            .all_weekdays()
+            .off(false)
+            .build()
+            .unwrap();
+        let _ = availability.add_rule(rule, 1);
+        availability.to_frames_in_range_str("2024-10-29 13:20:27", "2024-11-01 09:20:00");
+        let frames = availability.get_frames();
+        assert_eq!(frames.len(), 1);
+    }
+
+    #[test]
+    fn test_is_all_weekdays_relative_absolute() {
+        let rule: Rule<()> = RuleBuilder::new()
+            .start_time_str("2024-01-01 00:00:00")
+            .end_time_str("2025-01-01 00:00:00")
+            .monday()
+            .friday()
+            .build()
+            .unwrap();
+        assert_eq!(rule.is_relative(), true);
+        let rule: Rule<()> = RuleBuilder::new()
+            .start_time_str("2024-01-01 00:00:00")
+            .end_time_str("2024-01-31 00:00:00")
+            .all_weekdays()
+            .build()
+            .unwrap();
+        assert_eq!(rule.is_absolute(), true);
+    }
+
+    #[test]
+    fn test_midnight_to_midnight() {
+        let mut availability: Availability<()> = Availability::new();
+        let rule_absolute: Rule<()> = RuleBuilder::new()
+            .start_time_str("2024-01-02 00:00:00")
+            .end_time_str("2024-01-03 00:00:00")
+            .all_weekdays()
+            .build()
+            .unwrap();
+        assert!(rule_absolute.is_absolute()); // All weekdays and midnight to midnight should be absolute
+        availability.add_rule(rule_absolute, 1).unwrap();
+        availability.to_frames_in_range_str("2024-01-01 00:00:00", "2024-01-04 00:00:00");
+        let frames = availability.get_frames();
+        assert_eq!(frames.len(), 3);
+        let rule_relative: Rule<()> = RuleBuilder::new()
+            .start_time_str("2024-01-02 00:00:00")
+            .end_time_str("2024-01-03 23:59:60")
+            .all_weekdays()
+            .build()
+            .unwrap();
+        assert!(rule_relative.is_relative()); // All weekdays and midnight to 1 second before midnight should be relative
+        availability = Availability::new();
+        availability.add_rule(rule_relative, 1).unwrap();
+        availability.to_frames_in_range_str("2024-01-01 00:00:00", "2024-01-04 00:00:00");
+        // 2024-01-01 00:00:00 to 2024-01-02 00:00:00 off
+        // 2024-01-02 00:00:00 to 2024-01-02 23:59:60 on
+        // 2024-01-02 00:00:00 to 2024-01-03 00:00:00 off
+        // 2024-01-03 00:00:00 to 2024-01-04 23:59:60 off (duration of a fifth frame would be 0 seconds so it is ignored)
+        let frames = availability.get_frames();
+        for frame in frames.iter() {
+            println!("{}", frame);
+        }
+        assert_eq!(frames.len(), 4);
+
+        // With payload
+        let rule_relative: Rule<Value> = RuleBuilder::new()
+            .start_time_str("2024-01-02 00:00:00")
+            .end_time_str("2024-01-03 23:59:60")
+            .all_weekdays()
+            .payload(json!({"type": "regular"}))
+            .build()
+            .unwrap();
+        assert!(rule_relative.is_relative()); // All weekdays and midnight to 1 second before midnight should be relaitve
+        let mut availability: Availability<Value> = Availability::new();
+        availability.add_rule(rule_relative, 1).unwrap();
+        availability.to_frames_in_range_str("2024-01-01 00:00:00", "2024-01-04 00:00:00");
+        let frames = availability.get_frames();
+        for frame in frames.iter() {
+            println!("{}", frame);
+        }
+        assert_eq!(frames.len(), 4);
+    }
+
+    #[test]
+    fn test_frame_duration_midnight() {
+        // Rule from 00:00:00 to 23:59:60 on same day (leap second) gives duration 24:00:00 (1 full day)
+        let mut availability: Availability<()> = Availability::new();
+        let rule: Rule<()> = RuleBuilder::new()
+            .start_time_str("2024-01-01 00:00:00")
+            .end_time_str("2024-01-01 23:59:60")
+            .off(false)
+            .all_weekdays()
+            .build()
+            .unwrap();
+        availability.add_rule(rule, 1).unwrap();
+        availability.to_frames_in_range_str("2024-01-01 00:00:00", "2024-01-02 00:00:00");
+        let frames = availability.get_frames();
+        assert_eq!(frames.len(), 1);
+        assert!(frames[0].duration().num_seconds() == 86400);
+        // Rule from 00:00:00 to 00:00:00 next day gives duration 24:00:00 (1 full day)
+        let mut availability: Availability<()> = Availability::new();
+        let rule: Rule<()> = RuleBuilder::new()
+            .start_time_str("2024-01-01 00:00:00")
+            .end_time_str("2024-01-02 00:00:00")
+            .off(false)
+            .all_weekdays()
+            .build()
+            .unwrap();
+        availability.add_rule(rule, 1).unwrap();
+        availability.to_frames_in_range_str("2024-01-01 00:00:00", "2024-01-02 00:00:00");
+        let frames = availability.get_frames();
+        for frame in frames.iter() {
+            println!("{}", frame);
+        }
+        assert_eq!(frames.len(), 1);
+        assert!(frames[0].duration().num_seconds() == 86400);
     }
 }

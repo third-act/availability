@@ -183,14 +183,6 @@ where
     /// # Returns
     ///
     /// Returns the updated `RuleBuilder` instance.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// let payload = json!({"description": "Maintenance Window"});
-    /// let builder = RuleBuilder::new()
-    ///     .payload(payload);
-    /// ```
     pub fn payload(mut self, payload: T) -> Self {
         self.payload = Some(payload);
         self
@@ -262,20 +254,6 @@ where
 }
 
 /// Helper function to parse a datetime string in the form "YYYY-MM-DD HH:MM:SS"
-// fn parse_datetime(datetime_str: &str) -> Result<NaiveDateTime, String> {
-//     // Basic length check
-//     if datetime_str.len() != 19 {
-//         return Err(format!(
-//             "Expected 19 characters in datetime, got {}. String: {:?}",
-//             datetime_str.len(),
-//             datetime_str
-//         ));
-//     }
-
-//     // Parse as "YYYY-MM-DD HH:MM:SS"
-//     NaiveDateTime::parse_from_str(datetime_str, "%Y-%m-%d %H:%M:%S")
-//         .map_err(|e| format!("Invalid datetime: {}", e))
-// }
 fn parse_datetime(datetime_str: &str) -> Result<NaiveDateTime, chrono::ParseError> {
     NaiveDateTime::parse_from_str(datetime_str, "%Y-%m-%d %H:%M:%S")
 }

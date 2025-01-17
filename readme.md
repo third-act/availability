@@ -10,6 +10,10 @@ A Rust library for managing complex time-based rules and schedules with priority
 - Resource scheduling with priority overrides
 - Event calendars with recurring patterns
 - Maintenance windows and blackout periods
+- Based on ISO 8601 time formatting with milliseconds excluded.
+    - YYYY-MM-DD HH:MM:SS
+    - Day starts at 00:00:00
+    - Day ends at 23:59:59 or 23:59:60 for leap seconds
 
 ## How Rules and Frames Work
 
