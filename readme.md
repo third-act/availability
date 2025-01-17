@@ -64,7 +64,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 1) Create an empty Availability struct to store your schedule.
     let mut store_availability: Availability<StoreHours> = Availability::new();
 
-    // 2) Define rules using RuleBuilder (string-based times in "YYMMDDHHMMSS" format).
+    // 2) Define rules using RuleBuilder (string-based times in "YYYY-MM-DD HH:MM:SS" format).
     //    - Priority 1 (lowest): Open Mon-Fri from 09:00 to 17:00 (Jan 1 - Jan 31)
     let weekday_rule = RuleBuilder::new()
         .start_time_str("2024-01-01 09:00:00") // 2024-01-01 09:00:00

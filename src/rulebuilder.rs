@@ -36,7 +36,7 @@ where
 
     /// Sets the start time of the rule using a raw datetime string.
     ///
-    /// The datetime string must be in the `"YYMMDDHHMMSS"` format, representing
+    /// The datetime string must be in the `"YYYY-MM-DD HH:MM:SS"` format, representing
     /// year, month, day, hour, minute, and second. For example, `"231225093000"`
     /// corresponds to December 25, 2023, at 09:30:00.
     ///
@@ -49,7 +49,7 @@ where
 
     /// Sets the end time of the rule using a raw datetime string.
     ///
-    /// The datetime string must be in the `"YYMMDDHHMMSS"` format, representing
+    /// The datetime string must be in the `"YYYY-MM-DD HH:MM:SS"` format, representing
     /// year, month, day, hour, minute, and second. For example, `"231225173000"`
     /// corresponds to December 25, 2023, at 17:30:00.
     ///
@@ -63,7 +63,7 @@ where
     /// Sets the start time of the rule using a `NaiveDateTime` instance.
     ///
     /// This method converts the provided `NaiveDateTime` into the expected
-    /// `"YYMMDDHHMMSS"` string format internally.
+    /// `"YYYY-MM-DD HH:MM:SS"` string format internally.
     pub fn start_datetime(mut self, datetime: NaiveDateTime) -> Self {
         let datetime_str = datetime.format("%Y-%m-%d %H:%M:%S").to_string();
         self.start_str = Some(datetime_str);
@@ -73,7 +73,7 @@ where
     /// Sets the end time of the rule using a `NaiveDateTime` instance.
     ///
     /// This method converts the provided `NaiveDateTime` into the expected
-    /// `"YYMMDDHHMMSS"` string format internally.
+    /// `"YYYY-MM-DD HH:MM:SS"` string format internally.
     pub fn end_datetime(mut self, datetime: NaiveDateTime) -> Self {
         let datetime_str = datetime.format("%Y-%m-%d %H:%M:%S").to_string();
         self.end_str = Some(datetime_str);
