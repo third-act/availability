@@ -223,30 +223,22 @@ where
                 // Rule is completely within range
                 if rule.start >= start && rule.end < end {
                     let frame = Frame::new(rule.start, rule.end, rule.off, rule.payload.clone());
-                    if frame.duration().num_seconds() > 0 {
-                        priority_frames.push(frame);
-                    }
+                    priority_frames.push(frame);
                 }
                 // Rule starts before range but ends within range
                 else if rule.start < start && rule.end < end {
                     let frame = Frame::new(start, rule.end, rule.off, rule.payload.clone());
-                    if frame.duration().num_seconds() > 0 {
-                        priority_frames.push(frame);
-                    }
+                    priority_frames.push(frame);
                 }
                 // Rule starts within range but ends after range
                 else if rule.start >= start && rule.start < end && rule.end >= end {
                     let frame = Frame::new(rule.start, end, rule.off, rule.payload.clone());
-                    if frame.duration().num_seconds() > 0 {
-                        priority_frames.push(frame);
-                    }
+                    priority_frames.push(frame);
                 }
                 // Rule starts before range and ends after range
                 else if rule.start < start && rule.end >= end {
                     let frame = Frame::new(start, end, rule.off, rule.payload.clone());
-                    if frame.duration().num_seconds() > 0 {
-                        priority_frames.push(frame);
-                    }
+                    priority_frames.push(frame);
                 }
             }
 
@@ -299,14 +291,9 @@ where
                                 low_frame.off,
                                 low_frame.payload.clone(),
                             );
-                            if frame.duration().num_seconds() > 0 {
-                                merged_frames.push(frame);
-                            }
+                            merged_frames.push(frame);
                         }
-
-                        if high_frame.duration().num_seconds() > 0 {
-                            merged_frames.push(high_frame.clone());
-                        }
+                        merged_frames.push(high_frame.clone());
                         if low_frame.end > high_frame.end {
                             // Add non-overlapping part of lower priority frame
                             let frame = Frame::new(
@@ -315,9 +302,7 @@ where
                                 low_frame.off,
                                 low_frame.payload.clone(),
                             );
-                            if frame.duration().num_seconds() > 0 {
-                                merged_frames.push(frame);
-                            }
+                            merged_frames.push(frame);
                         }
 
                         i += 1;
@@ -354,16 +339,14 @@ where
         if let Some(last_frame) = frames.last() {
             if last_frame.end < end {
                 let frame: Frame<T> = Frame::new(last_frame.end, end, true, None);
-                if frame.duration().num_seconds() > 0 {
-                    frames.push(frame);
-                }
+                frames.push(frame);
             }
         }
         // If no frames at all were built, create one that covers [start, end) with the base rule
         if frames.is_empty() {
             frames.push(Frame::new(start, end, true, None));
         }
-
+        frames.retain(|f| f.duration().num_seconds() > 0);
         self.frames = frames;
     }
 
@@ -372,12 +355,12 @@ where
     /// This is a convenience method that parses the provided datetime strings and calls
     /// `to_frames_in_range`.
     ///
-    /// The datetime strings must be in the `"YYMMDDHHMMSS"` format.
+    /// The datetime strings must be in the `"YYYY-MM-DD HH:MM:SS"` format.
     ///
     /// # Parameters
     ///
-    /// - `start_str`: A string slice representing the start datetime in `"YYMMDDHHMMSS"` format. Start is inclusive.
-    /// - `end_str`: A string slice representing the end datetime in `"YYMMDDHHMMSS"` format. End is exclusive.
+    /// - `start_str`: A string slice representing the start datetime in `"YYYY-MM-DD HH:MM:SS"` format. Start is inclusive.
+    /// - `end_str`: A string slice representing the end datetime in `"YYYY-MM-DD HH:MM:SS"` format. End is exclusive.
     pub fn to_frames_in_range_str(&mut self, start: &str, end: &str) {
         if let (Ok(parsed_start), Ok(parsed_end)) = (
             NaiveDateTime::parse_from_str(start, "%Y-%m-%d %H:%M:%S"),
@@ -398,7 +381,7 @@ where
     }
 
     /// Retrieves the frame corresponding to the specified datetime string.
-    /// The datetime string must be in the `"YYMMDDHHMMSS"` format.
+    /// The datetime string must be in the `"YYYY-MM-DD HH:MM:SS"` format.
     pub fn get_frame_from_str(&self, datetime: &str) -> Option<Frame<T>> {
         match NaiveDateTime::parse_from_str(datetime, "%Y-%m-%d %H:%M:%S") {
             Ok(parsed_datetime) => self.get_frame(parsed_datetime),
@@ -893,13 +876,12 @@ mod tests {
         availability.to_frames_in_range_str("2024-01-01 00:00:00", "2024-01-04 00:00:00");
         // 2024-01-01 00:00:00 to 2024-01-02 00:00:00 off
         // 2024-01-02 00:00:00 to 2024-01-02 23:59:60 on
-        // 2024-01-02 00:00:00 to 2024-01-03 00:00:00 off
-        // 2024-01-03 00:00:00 to 2024-01-04 23:59:60 off (duration of a fifth frame would be 0 seconds so it is ignored)
+        // 2024-01-03 00:00:00 to 2024-01-03 23:59:60 on
         let frames = availability.get_frames();
         for frame in frames.iter() {
             println!("{}", frame);
         }
-        assert_eq!(frames.len(), 4);
+        assert_eq!(frames.len(), 3);
 
         // With payload
         let rule_relative: Rule<Value> = RuleBuilder::new()
@@ -917,7 +899,7 @@ mod tests {
         for frame in frames.iter() {
             println!("{}", frame);
         }
-        assert_eq!(frames.len(), 4);
+        assert_eq!(frames.len(), 3);
     }
 
     #[test]
